@@ -33,6 +33,17 @@ class Token(BaseModel):
     token_type: str
     user: User
 
+class UserInfo(BaseModel):
+    id: int
+    username: str
+    full_name: str
+    role: str
+    department: Optional[str] = None
+
+class UserResponse(BaseModel):
+    message: str
+    user: User
+
 
 # --- UserGroup ---
 class UserGroupBase(BaseModel):

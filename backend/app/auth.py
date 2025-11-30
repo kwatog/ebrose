@@ -41,7 +41,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user_from_token(token: str, db: Session):
+    """Extract user from JWT token - used by refresh endpoint"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -58,6 +59,35 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
     return user
+
+def get_current_user_from_cookie(request: Request, db: Session = Depends(get_db)):
+    """Get current user from HttpOnly cookie"""
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No authentication cookie found"
+        )
+    return get_current_user_from_token(token, db)
+
+def get_current_user(request: Request, db: Session = Depends(get_db)):
+    """Get current user - try cookie first, then Authorization header"""
+    # Try HttpOnly cookie first
+    token = request.cookies.get("access_token")
+    
+    if not token:
+        # Fallback to Authorization header for API clients/Swagger
+        auth_header = request.headers.get("authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:]  # Remove "Bearer " prefix
+    
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No authentication found"
+        )
+    
+    return get_current_user_from_token(token, db)
 
 def require_role(required_role: str):
     def role_checker(current_user: models.User = Depends(get_current_user)):
