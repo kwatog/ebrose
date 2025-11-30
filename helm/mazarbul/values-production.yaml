@@ -24,8 +24,9 @@ backend:
     targetCPUUtilizationPercentage: 60
       
   env:
-    SECRET_KEY: "production-secret-key"
+    SECRET_KEY: "REPLACE-WITH-SECURE-SECRET-KEY"
     DATABASE_URL: "postgresql://user:password@postgres-service:5432/mazarbul_prod"
+    ALLOWED_ORIGINS: "https://mazarbul.com,https://www.mazarbul.com"
     
   ingress:
     enabled: true

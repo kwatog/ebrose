@@ -16,6 +16,9 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nuxtjs

@@ -20,6 +20,7 @@ backend:
   env:
     SECRET_KEY: "development-secret-key"
     DATABASE_URL: "sqlite:///./data/mazarbul-dev.db"
+    ALLOWED_ORIGINS: "http://dev.mazarbul.local,http://api-dev.mazarbul.local"
     
   ingress:
     enabled: true

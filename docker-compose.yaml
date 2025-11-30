@@ -5,11 +5,12 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: mazarbul_backend
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite:///./mazarbul.db
-      - SECRET_KEY=local-development-secret
+      - DATABASE_URL=sqlite:///./data/mazarbul.db
+      - SECRET_KEY=local-development-secret-change-me
       - ACCESS_TOKEN_EXPIRE_MINUTES=1440
     volumes:
       - backend_data:/app/data
@@ -18,16 +19,21 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 10s
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: mazarbul_frontend
     ports:
       - "3000:3000"
     environment:
-      - NUXT_PUBLIC_API_BASE=http://backend:8000
+      # URL for SSR (internal Docker network)
+      - NUXT_API_BASE=http://backend:8000
+      # URL for Client (Browser access)
+      - NUXT_PUBLIC_API_BASE=http://localhost:8000
     depends_on:
       backend:
         condition: service_healthy
@@ -37,6 +43,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    restart: unless-stopped
 
 volumes:
   backend_data:

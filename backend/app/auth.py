@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional, Union
 import json
+import os
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status, Request
@@ -9,9 +10,9 @@ from sqlalchemy.orm import Session
 from .database import SessionLocal
 from . import models
 
-SECRET_KEY = "your-secret-key-change-in-production"
+SECRET_KEY = os.getenv("SECRET_KEY", "development-fallback-key-change-for-production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 # We use OAuth2PasswordBearer for Swagger UI compatibility, but logic allows custom header too
