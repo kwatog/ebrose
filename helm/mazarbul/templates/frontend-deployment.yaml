@@ -34,6 +34,10 @@ spec:
             {{- toYaml .Values.frontend.securityContext | nindent 12 }}
           image: {{ include "mazarbul.frontend.image" . }}
           imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          {{- if .Values.frontend.command }}
+          command:
+            {{- toYaml .Values.frontend.command | nindent 12 }}
+          {{- end }}
           ports:
             - name: http
               containerPort: 3000

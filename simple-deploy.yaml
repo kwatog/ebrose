@@ -1,0 +1,125 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mazarbul-dev
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mazarbul-backend
+  namespace: mazarbul-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mazarbul-backend
+  template:
+    metadata:
+      labels:
+        app: mazarbul-backend
+    spec:
+      containers:
+      - name: backend
+        image: python:3.11-slim
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          apt-get update && apt-get install -y gcc curl git
+          git clone https://github.com/kwatog/mazarbul.git /app
+          cd /app/backend
+          pip install -r requirements.txt
+          export DATABASE_URL=sqlite:///./data/mazarbul.db
+          export SECRET_KEY=minikube-dev-secret-key
+          export ACCESS_TOKEN_EXPIRE_MINUTES=1440
+          export ALLOWED_ORIGINS="http://192.168.49.2:30081"
+          export CREATE_ADMIN_USER=true
+          export ADMIN_USERNAME=admin
+          export ADMIN_PASSWORD=Admin123!
+          mkdir -p data
+          echo "Starting backend server..."
+          uvicorn app.main:app --host 0.0.0.0 --port 8000
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mazarbul-backend
+  namespace: mazarbul-dev
+spec:
+  selector:
+    app: mazarbul-backend
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 30080
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mazarbul-frontend
+  namespace: mazarbul-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mazarbul-frontend
+  template:
+    metadata:
+      labels:
+        app: mazarbul-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: node:20-alpine
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          apk add --no-cache git curl
+          git clone https://github.com/kwatog/mazarbul.git /app
+          cd /app/frontend
+          echo "Installing dependencies..."
+          npm install
+          echo "Building frontend..."
+          export NUXT_PUBLIC_API_BASE=http://localhost:8000
+          npm run build
+          echo "Starting frontend server..."
+          node .output/server/index.mjs
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NUXT_HOST
+          value: "0.0.0.0"
+        - name: NUXT_PORT
+          value: "3000"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mazarbul-frontend
+  namespace: mazarbul-dev
+spec:
+  selector:
+    app: mazarbul-frontend
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30081
+  type: NodePort

@@ -1,0 +1,127 @@
+# Minikube deployment values
+global:
+  imageRegistry: ""
+
+backend:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    registry: ""
+    repository: python
+    tag: "3.11-slim"
+    pullPolicy: IfNotPresent
+    
+  # Override security context to run as root for development
+  securityContext:
+    runAsUser: 0
+    runAsNonRoot: false
+    
+  podSecurityContext:
+    runAsUser: 0
+    runAsGroup: 0
+    fsGroup: 0
+    
+  # Use command override for development deployment
+  command: 
+    - /bin/bash
+    - -c
+    - |
+      apt-get update && apt-get install -y gcc curl git
+      git clone https://github.com/kwatog/mazarbul.git /tmp/mazarbul
+      cp -r /tmp/mazarbul/* /app/
+      cd /app/backend
+      pip install -r requirements.txt
+      mkdir -p /app/data
+      export DATABASE_URL=sqlite:///./data/mazarbul.db
+      export SECRET_KEY=minikube-dev-secret-key
+      export ACCESS_TOKEN_EXPIRE_MINUTES=1440
+      export ALLOWED_ORIGINS=http://localhost:3000
+      export CREATE_ADMIN_USER=true
+      export ADMIN_USERNAME=admin
+      export ADMIN_PASSWORD=Admin123!
+      uvicorn app.main:app --host 0.0.0.0 --port 8000
+    
+  service:
+    type: NodePort
+    port: 8000
+    targetPort: 8000
+    nodePort: 30080
+    
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+      
+  # Disable persistence for development
+  persistence:
+    enabled: false
+    
+  # Health checks with longer delay for git clone + setup
+  healthCheck:
+    enabled: true
+    path: /health
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+frontend:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    registry: ""
+    repository: node
+    tag: "20-alpine"
+    pullPolicy: IfNotPresent
+    
+  # Override security context to run as root for development
+  securityContext:
+    runAsUser: 0
+    runAsNonRoot: false
+    
+  podSecurityContext:
+    runAsUser: 0
+    runAsGroup: 0
+    fsGroup: 0
+    
+  # Use command override for development deployment
+  command:
+    - /bin/sh
+    - -c
+    - |
+      apk add --no-cache git curl
+      git clone https://github.com/kwatog/mazarbul.git /tmp/mazarbul
+      cp -r /tmp/mazarbul/* /app/
+      cd /app/frontend
+      npm install
+      export NUXT_PUBLIC_API_BASE=http://192.168.49.2:30080
+      npm run build
+      node .output/server/index.mjs
+      
+  service:
+    type: NodePort
+    port: 3000
+    targetPort: 3000
+    nodePort: 30081
+    
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+      
+  # Health checks with longer delay for git clone + setup
+  healthCheck:
+    enabled: true
+    path: /health
+    initialDelaySeconds: 180
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5

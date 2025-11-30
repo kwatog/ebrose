@@ -1,5 +1,5 @@
 export default defineNuxtConfig({
-  devtools: { enabled: true },
+  devtools: { enabled: false }, // Disable devtools in production
   css: ['~/assets/css/main.css'],
   app: {
     head: {
@@ -16,6 +16,17 @@ export default defineNuxtConfig({
       // Public config (Client-side) - defaults to browser-accessible URL
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
     }
+  },
+  // Fix CSP issues for production deployment
+  nitro: {
+    experimental: {
+      wasm: false
+    }
+  },
+  // Disable source maps to avoid CSP eval issues
+  sourcemap: {
+    server: false,
+    client: false
   },
   compatibilityDate: '2024-11-01'
 })
