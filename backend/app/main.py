@@ -23,7 +23,7 @@ from .routers import (
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Mazarbul API")
+app = FastAPI(title="Mazarbul API", debug=True)
 
 # Enable CORS for frontend
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
