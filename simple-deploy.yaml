@@ -35,6 +35,8 @@ spec:
         ports:
         - containerPort: 8000
         env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
         - name: DATABASE_URL
           value: "sqlite:////app/backend/data/mazarbul.db"
         - name: SECRET_KEY

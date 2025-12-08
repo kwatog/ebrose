@@ -9,6 +9,9 @@ echo "🚀 Deploying Mazarbul to Minikube..."
 MINIKUBE_IP=$(minikube ip)
 echo "📍 Minikube IP: $MINIKUBE_IP"
 
+# Calculate Allowed Origins
+ALLOWED_ORIGINS="http://${MINIKUBE_IP}:30081,http://localhost:3000"
+
 # Create namespace
 kubectl create namespace mazarbul-dev --dry-run=client -o yaml | kubectl apply -f -
 
@@ -17,6 +20,7 @@ helm upgrade --install mazarbul ./helm/mazarbul \
   --namespace mazarbul-dev \
   --values ./helm/mazarbul/values-minikube.yaml \
   --set frontend.env.NUXT_PUBLIC_API_BASE="http://${MINIKUBE_IP}:30080" \
+  --set backend.env.ALLOWED_ORIGINS="${ALLOWED_ORIGINS}" \
   --wait \
   --timeout 10m
 

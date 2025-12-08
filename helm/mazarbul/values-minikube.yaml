@@ -36,7 +36,6 @@ backend:
       export DATABASE_URL=sqlite:///./data/mazarbul.db
       export SECRET_KEY=minikube-dev-secret-key
       export ACCESS_TOKEN_EXPIRE_MINUTES=1440
-      export ALLOWED_ORIGINS=http://localhost:3000
       export CREATE_ADMIN_USER=true
       export ADMIN_USERNAME=admin
       export ADMIN_PASSWORD=Admin123!
@@ -99,7 +98,6 @@ frontend:
       cp -r /tmp/mazarbul/* /app/
       cd /app/frontend
       npm install
-      export NUXT_PUBLIC_API_BASE=http://192.168.49.2:30080
       npm run build
       node .output/server/index.mjs
       

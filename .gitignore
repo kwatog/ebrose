@@ -58,7 +58,7 @@ Thumbs.db
 logs/
 
 # Docker
-.dockerignore
+
 
 # Sensitive files
 .env
