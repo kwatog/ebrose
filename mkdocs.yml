@@ -1,0 +1,14 @@
+site_name: Mazarbul
+site_description: Procurement and budget tracking system
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Backend API: backend-api.md
+  - Frontend Pages: frontend-pages.md
+  - Functions: functions.md
+  - Operations: operations.md
+
+plugins:
+  - techdocs-core
+

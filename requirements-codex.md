@@ -11,7 +11,7 @@
 **Domain:** Procurement & Resource Tracking  
 
 **Goal:** Replace Excel-based tracking of:
-- Business Case → WBS → Asset → SOW (future) → Purchase Order → Goods Receipt
+- Workday Budget Item → Business Case Line Item → WBS → Asset → SOW (future) → Purchase Order → Goods Receipt
 - Resource ↔ Purchase Order allocation
 - PO burn / remaining amount
 - Alerts when POs are running out or data is missing
@@ -20,6 +20,14 @@
 - Frontend: Nuxt 4 (Vue 3, TypeScript allowed)
 - Backend: FastAPI (Python)
 - Database: SQLite (file-based, foreign keys ON)
+
+### 0.1 Conventions (Important)
+
+- **Dates vs datetimes:** Use ISO 8601 strings. Use `YYYY-MM-DD` for date-only fields (e.g., `start_date`, `end_date`, `gr_date`) and `YYYY-MM-DDTHH:MM:SSZ` (UTC) for audit fields (e.g., `created_at`, `updated_at`, `timestamp`).
+- **Money fields:** `estimated_cost`, `total_amount`, `amount`, `cost_per_month`, `expected_monthly_burn` should be treated as currency amounts. Prefer storing as **integer minor units** (e.g., cents) or using `Decimal` end-to-end. If using SQLite `REAL`/Python `float`, round consistently (e.g., 2dp) and avoid equality comparisons.
+- **Currencies:** Use ISO 4217 codes (e.g., `SGD`, `USD`) in `currency`.
+- **Record ownership:** Each business record stores `owner_group_id` (FK → `UserGroup.id`). Users gain default access via `UserGroupMembership`.
+- **Enum-like fields:** Constrain `User.role` to `Admin|Manager|User|Viewer` and `RecordAccess.access_level` to `Read|Write|Full`.
 
 ---
 
@@ -31,7 +39,6 @@
 - email: string UNIQUE  
 - hashed_password: string
 - full_name: string
-- department: string
 - role: string (Admin, Manager, User, Viewer)
 - is_active: bool (default True)
 - created_at: string (ISO datetime)
@@ -42,66 +49,94 @@
 - title: text  
 - description: text  
 - requestor: text  
-- dept: text  
-- estimated_cost: float  
+- lead_group_id: int FK → UserGroup.id (the coordinating group that can edit BusinessCase-level metadata)
+- estimated_cost: float (optional; may be computed as sum of line items)
 - created_at: string (ISO date or datetime)  
 - status: string (Draft, Submitted, Approved, Rejected, etc.)
 - created_by: int FK → User.id (audit)
 - updated_by: int FK → User.id (audit)
 - updated_at: string (ISO datetime, audit)
 
-### 1.3 WBS
+### 1.3 BusinessCaseLineItem
+
+Business cases can include multiple line items (often requested by different user groups). The line item is the unit that ties to Workday budget items and drives downstream procurement.
+
+- id: int PK
+- business_case_id: int FK → BusinessCase.id
+- budget_item_id: int FK → BudgetItem.id
+- owner_group_id: int FK → UserGroup.id (who owns this request)
+- title: text
+- description: text
+- spend_category: string (CAPEX, OPEX)
+- requested_amount: float
+- currency: string
+- planned_commit_date: string (ISO date)
+- status: string (Draft, Submitted, Approved, Rejected, etc.)
+- created_by: int FK → User.id (audit)
+- updated_by: int FK → User.id (audit)
+- created_at: string (ISO datetime, audit)
+- updated_at: string (ISO datetime, audit)
+
+### 1.4 WBS
 - id: int PK  
-- business_case_id: int FK → BusinessCase.id  
+- business_case_line_item_id: int FK → BusinessCaseLineItem.id
 - wbs_code: string UNIQUE  
 - description: text  
+- owner_group_id: int FK → UserGroup.id
 - status: string
 - created_by: int FK → User.id (audit)
 - updated_by: int FK → User.id (audit)
 - created_at: string (ISO datetime, audit)
 - updated_at: string (ISO datetime, audit)  
 
-### 1.4 Asset
+### 1.5 Asset
 - id: int PK  
 - wbs_id: int FK → WBS.id  
 - asset_code: string UNIQUE  
-- asset_type: string (Capex, Opex)  
+- asset_type: string (CAPEX, OPEX; derived from line item)
 - description: text  
+- owner_group_id: int FK → UserGroup.id
 - status: string
 - created_by: int FK → User.id (audit)
 - updated_by: int FK → User.id (audit)
 - created_at: string (ISO datetime, audit)
 - updated_at: string (ISO datetime, audit)  
 
-### 1.5 PurchaseOrder
+### 1.6 PurchaseOrder
 - id: int PK  
 - asset_id: int FK → Asset.id  
 - po_number: string UNIQUE  
+- ariba_pr_number: string (nullable)
 - supplier: string  
 - po_type: string (T&M, Fixed, etc.)  
 - start_date: string  
 - end_date: string  
 - total_amount: float  
 - currency: string  
+- spend_category: string (CAPEX, OPEX; derived from line item)
+- planned_commit_date: string (ISO date)
+- actual_commit_date: string (ISO date, nullable; set to PO approved date)
+- owner_group_id: int FK → UserGroup.id
 - status: string (Open, Closed, Exhausted, etc.)
 - created_by: int FK → User.id (audit)
 - updated_by: int FK → User.id (audit)
 - created_at: string (ISO datetime, audit)
 - updated_at: string (ISO datetime, audit)
 
-### 1.6 GoodsReceipt
+### 1.7 GoodsReceipt
 - id: int PK  
 - po_id: int FK → PurchaseOrder.id  
 - gr_number: string UNIQUE  
 - gr_date: string  
 - amount: float  
 - description: text
+- owner_group_id: int FK → UserGroup.id
 - created_by: int FK → User.id (audit)
 - updated_by: int FK → User.id (audit)
 - created_at: string (ISO datetime, audit)
 - updated_at: string (ISO datetime, audit)  
 
-### 1.7 Resource
+### 1.8 Resource
 - id: int PK  
 - name: string  
 - vendor: string  
@@ -109,41 +144,43 @@
 - start_date: string  
 - end_date: string  
 - cost_per_month: float  
+- owner_group_id: int FK → UserGroup.id
 - status: string (Active, Inactive, Left, etc.)
 - created_by: int FK → User.id (audit)
 - updated_by: int FK → User.id (audit)
 - created_at: string (ISO datetime, audit)
 - updated_at: string (ISO datetime, audit)
 
-### 1.8 ResourcePOAllocation
+### 1.9 ResourcePOAllocation
 - id: int PK  
 - resource_id: int FK → Resource.id  
 - po_id: int FK → PurchaseOrder.id  
 - allocation_start: string  
 - allocation_end: string  
 - expected_monthly_burn: float
+- owner_group_id: int FK → UserGroup.id
 - created_by: int FK → User.id (audit)
 - updated_by: int FK → User.id (audit)
 - created_at: string (ISO datetime, audit)
 - updated_at: string (ISO datetime, audit)  
 
-### 1.9 UserGroup
+### 1.10 UserGroup
 - id: int PK
 - name: string UNIQUE
 - description: text
 - created_by: int FK → User.id (audit)
 - created_at: string (ISO datetime, audit)
 
-### 1.10 UserGroupMembership
+### 1.11 UserGroupMembership
 - id: int PK
 - user_id: int FK → User.id
 - group_id: int FK → UserGroup.id
 - added_by: int FK → User.id (audit)
 - added_at: string (ISO datetime, audit)
 
-### 1.11 RecordAccess
+### 1.12 RecordAccess
 - id: int PK
-- record_type: string (BusinessCase, WBS, Asset, PurchaseOrder, GoodsReceipt, Resource, ResourcePOAllocation)
+- record_type: string (BudgetItem, BusinessCase, BusinessCaseLineItem, WBS, Asset, PurchaseOrder, GoodsReceipt, Resource, ResourcePOAllocation)
 - record_id: int (the ID of the specific record)
 - user_id: int FK → User.id (nullable - for individual user access)
 - group_id: int FK → UserGroup.id (nullable - for group access)
@@ -152,7 +189,7 @@
 - granted_at: string (ISO datetime)
 - expires_at: string (ISO datetime, nullable)
 
-### 1.12 AuditLog
+### 1.13 AuditLog
 - id: int PK
 - table_name: string (which table was affected)
 - record_id: int (which record was affected)
@@ -163,6 +200,23 @@
 - timestamp: string (ISO datetime)
 - ip_address: string (nullable)
 - user_agent: string (nullable)
+
+### 1.14 BudgetItem (Workday)
+
+Represents a Workday budget line item / budget entry.
+
+- id: int PK
+- workday_ref: string UNIQUE
+- title: text
+- description: text
+- budget_amount: float
+- currency: string
+- fiscal_year: int
+- owner_group_id: int FK → UserGroup.id
+- created_by: int FK → User.id (audit)
+- updated_by: int FK → User.id (audit)
+- created_at: string (ISO datetime, audit)
+- updated_at: string (ISO datetime, audit)
 
 ---
 
@@ -208,9 +262,16 @@ Expose alerts via `GET /alerts`.
 ### 2.3 Record-Level Access Control
 
 **Default Access:**
-- Creator of a record has Full access by default
-- Users with Manager/Admin roles have access based on role permissions
-- Department-based access still applies for User role
+- Records belong to an **owner user group** (`owner_group_id`) and are visible to all users in that group (not owned by an individual user)
+- Creator of a record is captured for **audit only** (`created_by` / `updated_by`)
+- Users with Manager/Admin roles have cross-group access based on role permissions
+- Record-level grants (`RecordAccess`) can be used to share records across groups
+
+**Ownership Assignment Rules:**
+- For top-level records (`BudgetItem`, `BusinessCaseLineItem`, `Resource`), `owner_group_id` is required on create.
+- For child records (`WBS`, `Asset`, `PurchaseOrder`, `GoodsReceipt`, `ResourcePOAllocation`), `owner_group_id` is inherited from the parent chain; if provided by the client it must either match or be ignored/overridden by the backend.
+- `BusinessCase` is an umbrella object and is not used for access scoping. It should be readable by any user who can read at least one of its `BusinessCaseLineItem` records.
+- `BusinessCase.lead_group_id` controls who can edit BusinessCase-level metadata (in addition to Manager/Admin).
 
 **Access Levels:**
 - **Read**: View record and its data
@@ -221,11 +282,14 @@ Expose alerts via `GET /alerts`.
 For any record access request:
 1. Check if user is Admin → Full access to all records
 2. Check if user is Manager → Full access to all records  
-3. Check if user is creator → Full access
-4. Check explicit RecordAccess grants for user → use highest access level
-5. Check RecordAccess grants for user's groups → use highest access level
-6. Check department-based access (User role) → department records only
-7. Deny access
+3. If record has `owner_group_id`: check if it is one of the user's groups → allow access per role (Viewer=Read-only; User=Read/Write; delete requires Manager+)
+4. If record is `BusinessCase`: allow Read if user can Read any `BusinessCaseLineItem` where `business_case_id == BusinessCase.id`; allow Write only for `lead_group_id` members (role-capped)
+4. Check explicit RecordAccess grants for user → use highest access level (still capped by role)
+5. Check RecordAccess grants for user's groups → use highest access level (still capped by role)
+6. Deny access
+
+**Role Cap (Important):**
+- A record-level grant must not elevate a user beyond what their role allows (e.g., Viewer remains read-only even if granted Write).
 
 **Inheritance Rules:**
 - Child records inherit access from parent where logical:
@@ -234,6 +298,10 @@ For any record access request:
   - PurchaseOrder inherits from Asset
   - GoodsReceipt inherits from PurchaseOrder
   - ResourcePOAllocation inherits from both Resource and PurchaseOrder (intersection)
+
+**Department Consistency (Important):**
+**Group Consistency (Important):**
+- Child records must inherit the same `owner_group_id` as the parent, and writes must validate that `owner_group_id` values remain consistent across the chain.
 
 ### 2.4 Audit Trail
 
@@ -252,7 +320,8 @@ All create/update/delete operations must:
 - Use JWT tokens for stateless authentication
 - Access token expires in 15 minutes
 - Refresh token expires in 7 days
-- Store tokens in HTTP-only cookies for security
+- Store tokens in HTTP-only cookies for security (recommended names: `access_token`, `refresh_token`)
+- Backend may optionally also accept `Authorization: Bearer <token>` (useful for Swagger/CLI), but the frontend should rely on cookies
 
 ### 3.2 Password Security
 - Hash passwords using bcrypt with salt rounds >= 12
@@ -267,7 +336,7 @@ All create/update/delete operations must:
 
 **Role Hierarchy:**
 1. **Viewer** - Read-only access to all entities
-2. **User** - Create/Edit own department's data + Viewer permissions
+2. **User** - Create/Edit records owned by their user group(s) + Viewer permissions
 3. **Manager** - Create/Edit/Delete all data + User permissions  
 4. **Admin** - User management + Manager permissions
 
@@ -288,9 +357,9 @@ RecordAccess    | Read   | Grant+| Full    | Full
 AuditLog        | Read   | Read | Read    | Full
 Alerts          | Read   | Read | Read    | Read
 
-* CRUD only for own department's data + granted record access
+* CRUD only for records in the user's group(s) + any records explicitly shared with them
 ** Subject to record-level access control
-+ Grant access only to own created records
++ Grant access only for records in the user's group(s) (or where the user already has Full access)
 ```
 
 ### 3.4 Authentication & Access Management Endpoints
@@ -299,7 +368,7 @@ Alerts          | Read   | Read | Read    | Read
 # Authentication
 POST /auth/register     - Register new user (Admin only)
 POST /auth/login        - Login with username/password
-POST /auth/logout       - Logout (invalidate tokens)
+POST /auth/logout       - Logout (clear cookies; revoke refresh token if using server-side refresh storage)
 POST /auth/refresh      - Refresh access token
 GET  /auth/me          - Get current user info
 PUT  /auth/me          - Update current user profile
@@ -337,9 +406,9 @@ Use dependency injection to check:
 
 **Login Flow:**
 1. User submits credentials to `/auth/login`
-2. Backend validates and returns JWT tokens in HTTP-only cookies
+2. Backend validates and sets JWT tokens in HTTP-only cookies
 3. Frontend redirects to dashboard
-4. All API calls automatically include cookies
+4. All API calls include cookies (`credentials: 'include'` if API is cross-origin)
 5. Handle token refresh automatically on 401 responses
 
 **Route Guards:**
@@ -362,128 +431,10 @@ CREATE TABLE IF NOT EXISTS user (
   email TEXT UNIQUE NOT NULL,
   hashed_password TEXT NOT NULL,
   full_name TEXT NOT NULL,
-  department TEXT,
-  role TEXT DEFAULT 'User',
+  role TEXT DEFAULT 'User' CHECK (role IN ('Admin','Manager','User','Viewer')),
   is_active BOOLEAN DEFAULT 1,
   created_at TEXT,
   last_login TEXT
-);
-
-CREATE TABLE IF NOT EXISTS business_case (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  description TEXT,
-  requestor TEXT,
-  dept TEXT,
-  estimated_cost REAL,
-  created_at TEXT,
-  status TEXT,
-  created_by INTEGER,
-  updated_by INTEGER,
-  updated_at TEXT,
-  FOREIGN KEY (created_by) REFERENCES user(id),
-  FOREIGN KEY (updated_by) REFERENCES user(id)
-);
-
-CREATE TABLE IF NOT EXISTS wbs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  business_case_id INTEGER,
-  wbs_code TEXT UNIQUE,
-  description TEXT,
-  status TEXT,
-  created_by INTEGER,
-  updated_by INTEGER,
-  created_at TEXT,
-  updated_at TEXT,
-  FOREIGN KEY (business_case_id) REFERENCES business_case(id),
-  FOREIGN KEY (created_by) REFERENCES user(id),
-  FOREIGN KEY (updated_by) REFERENCES user(id)
-);
-
-CREATE TABLE IF NOT EXISTS asset (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  wbs_id INTEGER,
-  asset_code TEXT UNIQUE,
-  asset_type TEXT,
-  description TEXT,
-  status TEXT,
-  created_by INTEGER,
-  updated_by INTEGER,
-  created_at TEXT,
-  updated_at TEXT,
-  FOREIGN KEY (wbs_id) REFERENCES wbs(id),
-  FOREIGN KEY (created_by) REFERENCES user(id),
-  FOREIGN KEY (updated_by) REFERENCES user(id)
-);
-
-CREATE TABLE IF NOT EXISTS purchase_order (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  asset_id INTEGER,
-  po_number TEXT UNIQUE,
-  supplier TEXT,
-  po_type TEXT,
-  start_date TEXT,
-  end_date TEXT,
-  total_amount REAL,
-  currency TEXT,
-  status TEXT,
-  created_by INTEGER,
-  updated_by INTEGER,
-  created_at TEXT,
-  updated_at TEXT,
-  FOREIGN KEY (asset_id) REFERENCES asset(id),
-  FOREIGN KEY (created_by) REFERENCES user(id),
-  FOREIGN KEY (updated_by) REFERENCES user(id)
-);
-
-CREATE TABLE IF NOT EXISTS goods_receipt (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  po_id INTEGER,
-  gr_number TEXT UNIQUE,
-  gr_date TEXT,
-  amount REAL,
-  description TEXT,
-  created_by INTEGER,
-  updated_by INTEGER,
-  created_at TEXT,
-  updated_at TEXT,
-  FOREIGN KEY (po_id) REFERENCES purchase_order(id),
-  FOREIGN KEY (created_by) REFERENCES user(id),
-  FOREIGN KEY (updated_by) REFERENCES user(id)
-);
-
-CREATE TABLE IF NOT EXISTS resource (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT,
-  vendor TEXT,
-  role TEXT,
-  start_date TEXT,
-  end_date TEXT,
-  cost_per_month REAL,
-  status TEXT,
-  created_by INTEGER,
-  updated_by INTEGER,
-  created_at TEXT,
-  updated_at TEXT,
-  FOREIGN KEY (created_by) REFERENCES user(id),
-  FOREIGN KEY (updated_by) REFERENCES user(id)
-);
-
-CREATE TABLE IF NOT EXISTS resource_po_allocation (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  resource_id INTEGER,
-  po_id INTEGER,
-  allocation_start TEXT,
-  allocation_end TEXT,
-  expected_monthly_burn REAL,
-  created_by INTEGER,
-  updated_by INTEGER,
-  created_at TEXT,
-  updated_at TEXT,
-  FOREIGN KEY (resource_id) REFERENCES resource(id),
-  FOREIGN KEY (po_id) REFERENCES purchase_order(id),
-  FOREIGN KEY (created_by) REFERENCES user(id),
-  FOREIGN KEY (updated_by) REFERENCES user(id)
 );
 
 CREATE TABLE IF NOT EXISTS user_group (
@@ -507,20 +458,195 @@ CREATE TABLE IF NOT EXISTS user_group_membership (
   UNIQUE(user_id, group_id)
 );
 
+CREATE TABLE IF NOT EXISTS business_case (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  description TEXT,
+  requestor TEXT,
+  lead_group_id INTEGER NOT NULL,
+  estimated_cost REAL,
+  created_at TEXT,
+  status TEXT,
+  created_by INTEGER,
+  updated_by INTEGER,
+  updated_at TEXT,
+  FOREIGN KEY (lead_group_id) REFERENCES user_group(id),
+  FOREIGN KEY (created_by) REFERENCES user(id),
+  FOREIGN KEY (updated_by) REFERENCES user(id)
+);
+
+CREATE TABLE IF NOT EXISTS budget_item (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  workday_ref TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  budget_amount REAL NOT NULL,
+  currency TEXT NOT NULL,
+  fiscal_year INTEGER NOT NULL,
+  owner_group_id INTEGER NOT NULL,
+  created_by INTEGER,
+  updated_by INTEGER,
+  created_at TEXT,
+  updated_at TEXT,
+  FOREIGN KEY (owner_group_id) REFERENCES user_group(id),
+  FOREIGN KEY (created_by) REFERENCES user(id),
+  FOREIGN KEY (updated_by) REFERENCES user(id)
+);
+
+CREATE TABLE IF NOT EXISTS business_case_line_item (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  business_case_id INTEGER NOT NULL,
+  budget_item_id INTEGER NOT NULL,
+  owner_group_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  spend_category TEXT NOT NULL CHECK (spend_category IN ('CAPEX','OPEX')),
+  requested_amount REAL NOT NULL,
+  currency TEXT NOT NULL,
+  planned_commit_date TEXT,
+  status TEXT,
+  created_by INTEGER,
+  updated_by INTEGER,
+  created_at TEXT,
+  updated_at TEXT,
+  FOREIGN KEY (business_case_id) REFERENCES business_case(id),
+  FOREIGN KEY (budget_item_id) REFERENCES budget_item(id),
+  FOREIGN KEY (owner_group_id) REFERENCES user_group(id),
+  FOREIGN KEY (created_by) REFERENCES user(id),
+  FOREIGN KEY (updated_by) REFERENCES user(id)
+);
+
+CREATE TABLE IF NOT EXISTS wbs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  business_case_line_item_id INTEGER NOT NULL,
+  wbs_code TEXT UNIQUE,
+  description TEXT,
+  owner_group_id INTEGER NOT NULL,
+  status TEXT,
+  created_by INTEGER,
+  updated_by INTEGER,
+  created_at TEXT,
+  updated_at TEXT,
+  FOREIGN KEY (business_case_line_item_id) REFERENCES business_case_line_item(id),
+  FOREIGN KEY (owner_group_id) REFERENCES user_group(id),
+  FOREIGN KEY (created_by) REFERENCES user(id),
+  FOREIGN KEY (updated_by) REFERENCES user(id)
+);
+
+CREATE TABLE IF NOT EXISTS asset (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  wbs_id INTEGER,
+  asset_code TEXT UNIQUE,
+  asset_type TEXT,
+  description TEXT,
+  owner_group_id INTEGER NOT NULL,
+  status TEXT,
+  created_by INTEGER,
+  updated_by INTEGER,
+  created_at TEXT,
+  updated_at TEXT,
+  FOREIGN KEY (wbs_id) REFERENCES wbs(id),
+  FOREIGN KEY (owner_group_id) REFERENCES user_group(id),
+  FOREIGN KEY (created_by) REFERENCES user(id),
+  FOREIGN KEY (updated_by) REFERENCES user(id)
+);
+
+CREATE TABLE IF NOT EXISTS purchase_order (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  asset_id INTEGER,
+  po_number TEXT UNIQUE,
+  supplier TEXT,
+  po_type TEXT,
+  start_date TEXT,
+  end_date TEXT,
+  total_amount REAL,
+  currency TEXT,
+  spend_category TEXT NOT NULL CHECK (spend_category IN ('CAPEX','OPEX')),
+  planned_commit_date TEXT,
+  actual_commit_date TEXT,
+  ariba_pr_number TEXT,
+  owner_group_id INTEGER NOT NULL,
+  status TEXT,
+  created_by INTEGER,
+  updated_by INTEGER,
+  created_at TEXT,
+  updated_at TEXT,
+  FOREIGN KEY (asset_id) REFERENCES asset(id),
+  FOREIGN KEY (owner_group_id) REFERENCES user_group(id),
+  FOREIGN KEY (created_by) REFERENCES user(id),
+  FOREIGN KEY (updated_by) REFERENCES user(id)
+);
+
+CREATE TABLE IF NOT EXISTS goods_receipt (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  po_id INTEGER,
+  gr_number TEXT UNIQUE,
+  gr_date TEXT,
+  amount REAL,
+  description TEXT,
+  owner_group_id INTEGER NOT NULL,
+  created_by INTEGER,
+  updated_by INTEGER,
+  created_at TEXT,
+  updated_at TEXT,
+  FOREIGN KEY (po_id) REFERENCES purchase_order(id),
+  FOREIGN KEY (owner_group_id) REFERENCES user_group(id),
+  FOREIGN KEY (created_by) REFERENCES user(id),
+  FOREIGN KEY (updated_by) REFERENCES user(id)
+);
+
+CREATE TABLE IF NOT EXISTS resource (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT,
+  vendor TEXT,
+  role TEXT,
+  start_date TEXT,
+  end_date TEXT,
+  cost_per_month REAL,
+  owner_group_id INTEGER NOT NULL,
+  status TEXT,
+  created_by INTEGER,
+  updated_by INTEGER,
+  created_at TEXT,
+  updated_at TEXT,
+  FOREIGN KEY (owner_group_id) REFERENCES user_group(id),
+  FOREIGN KEY (created_by) REFERENCES user(id),
+  FOREIGN KEY (updated_by) REFERENCES user(id)
+);
+
+CREATE TABLE IF NOT EXISTS resource_po_allocation (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  resource_id INTEGER,
+  po_id INTEGER,
+  allocation_start TEXT,
+  allocation_end TEXT,
+  expected_monthly_burn REAL,
+  owner_group_id INTEGER NOT NULL,
+  created_by INTEGER,
+  updated_by INTEGER,
+  created_at TEXT,
+  updated_at TEXT,
+  FOREIGN KEY (resource_id) REFERENCES resource(id),
+  FOREIGN KEY (po_id) REFERENCES purchase_order(id),
+  FOREIGN KEY (owner_group_id) REFERENCES user_group(id),
+  FOREIGN KEY (created_by) REFERENCES user(id),
+  FOREIGN KEY (updated_by) REFERENCES user(id)
+);
+
 CREATE TABLE IF NOT EXISTS record_access (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   record_type TEXT NOT NULL,
   record_id INTEGER NOT NULL,
   user_id INTEGER,
   group_id INTEGER,
-  access_level TEXT NOT NULL,
+  access_level TEXT NOT NULL CHECK (access_level IN ('Read','Write','Full')),
   granted_by INTEGER,
   granted_at TEXT,
   expires_at TEXT,
   FOREIGN KEY (user_id) REFERENCES user(id),
   FOREIGN KEY (group_id) REFERENCES user_group(id),
   FOREIGN KEY (granted_by) REFERENCES user(id),
-  CHECK (user_id IS NOT NULL OR group_id IS NOT NULL)
+  CHECK ((user_id IS NOT NULL AND group_id IS NULL) OR (user_id IS NULL AND group_id IS NOT NULL))
 );
 
 CREATE TABLE IF NOT EXISTS audit_log (
@@ -545,10 +671,12 @@ CREATE TABLE IF NOT EXISTS audit_log (
 ### 5.1 Database Setup (`backend/app/database.py`)
 
 ```python
+import os
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///../mazarbul.db"
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./mazarbul.db")
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
@@ -580,7 +708,7 @@ class BusinessCase(Base):
     title = Column(Text, nullable=False)
     description = Column(Text)
     requestor = Column(String(255))
-    dept = Column(String(255))
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
     estimated_cost = Column(Real)
     created_at = Column(String(32))
     status = Column(String(50))
@@ -593,6 +721,7 @@ class WBS(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     business_case_id = Column(Integer, ForeignKey("business_case.id"))
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
     wbs_code = Column(String(255), unique=True)
     description = Column(Text)
     status = Column(String(50))
@@ -606,6 +735,7 @@ class Asset(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     wbs_id = Column(Integer, ForeignKey("wbs.id"))
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
     asset_code = Column(String(255), unique=True)
     asset_type = Column(String(50))
     description = Column(Text)
@@ -620,6 +750,7 @@ class PurchaseOrder(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     asset_id = Column(Integer, ForeignKey("asset.id"))
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
     po_number = Column(String(255), unique=True, index=True)
     supplier = Column(String(255))
     po_type = Column(String(50))
@@ -639,6 +770,7 @@ class GoodsReceipt(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     po_id = Column(Integer, ForeignKey("purchase_order.id"))
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
     gr_number = Column(String(255), unique=True, index=True)
     gr_date = Column(String(32))
     amount = Column(Real)
@@ -651,6 +783,7 @@ class Resource(Base):
     __tablename__ = "resource"
 
     id = Column(Integer, primary_key=True, index=True)
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
     name = Column(String(255))
     vendor = Column(String(255))
     role = Column(String(255))
@@ -668,6 +801,7 @@ class ResourcePOAllocation(Base):
     id = Column(Integer, primary_key=True, index=True)
     resource_id = Column(Integer, ForeignKey("resource.id"))
     po_id = Column(Integer, ForeignKey("purchase_order.id"))
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
     allocation_start = Column(String(32))
     allocation_end = Column(String(32))
     expected_monthly_burn = Column(Real)
@@ -704,6 +838,12 @@ class PurchaseOrder(PurchaseOrderBase):
 
     class Config:
         orm_mode = True
+
+Note: `owner_group_id` is stored on `PurchaseOrder` in the database, but should be derived from the parent `Asset` during create/update to keep the chain consistent.
+
+# If using Pydantic v2, use:
+# from pydantic import ConfigDict
+# model_config = ConfigDict(from_attributes=True)
 ```
 
 ### 5.4 Main App (`backend/app/main.py`)
@@ -804,8 +944,9 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from .database import SessionLocal
 from . import models
@@ -815,7 +956,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 def get_db():
     db = SessionLocal()
@@ -840,14 +981,28 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+def get_token(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    # Prefer Authorization header when present (Swagger/CLI), otherwise fall back to HttpOnly cookie.
+    if credentials and credentials.scheme.lower() == "bearer":
+        return credentials.credentials
+    cookie_token = request.cookies.get("access_token")
+    if cookie_token:
+        return cookie_token
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Not authenticated",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def get_current_user(token: str = Depends(get_token), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
@@ -884,11 +1039,10 @@ def check_record_access(record_type: str, record_id: int, required_access: str):
         # Manager has full access to everything  
         if current_user.role == "Manager":
             return current_user
-            
-        # Check if user is creator (has full access)
+
         record = db.query(getattr(models, record_type)).get(record_id)
-        if record and hasattr(record, 'created_by') and record.created_by == current_user.id:
-            return current_user
+        if not record:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
             
         # Check explicit record access grants
         access_levels = {"Read": 0, "Write": 1, "Full": 2}
@@ -899,7 +1053,7 @@ def check_record_access(record_type: str, record_id: int, required_access: str):
             models.RecordAccess.record_type == record_type,
             models.RecordAccess.record_id == record_id,
             models.RecordAccess.user_id == current_user.id,
-            models.RecordAccess.expires_at.is_(None) or models.RecordAccess.expires_at > datetime.utcnow().isoformat()
+            or_(models.RecordAccess.expires_at.is_(None), models.RecordAccess.expires_at > datetime.utcnow().isoformat())
         ).first()
         
         if user_access and access_levels.get(user_access.access_level, 0) >= required_level:
@@ -915,15 +1069,24 @@ def check_record_access(record_type: str, record_id: int, required_access: str):
                 models.RecordAccess.record_type == record_type,
                 models.RecordAccess.record_id == record_id,
                 models.RecordAccess.group_id == membership.group_id,
-                models.RecordAccess.expires_at.is_(None) or models.RecordAccess.expires_at > datetime.utcnow().isoformat()
+                or_(models.RecordAccess.expires_at.is_(None), models.RecordAccess.expires_at > datetime.utcnow().isoformat())
             ).first()
             
             if group_access and access_levels.get(group_access.access_level, 0) >= required_level:
                 return current_user
-                
-        # Check department access for User role
-        if current_user.role == "User" and record and hasattr(record, 'dept'):
-            if record.dept == current_user.department and required_access in ["Read", "Write"]:
+
+        # Default group access: records belong to an owning group, not an individual user
+        user_group_ids = {
+            m.group_id
+            for m in db.query(models.UserGroupMembership).filter(
+                models.UserGroupMembership.user_id == current_user.id
+            )
+        }
+
+        if hasattr(record, 'owner_group_id') and record.owner_group_id in user_group_ids:
+            if current_user.role == "Viewer" and required_access == "Read":
+                return current_user
+            if current_user.role == "User" and required_access in ["Read", "Write"]:
                 return current_user
                 
         raise HTTPException(
@@ -980,7 +1143,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE || 'http://localhost:8000'
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || process.env.API_BASE || 'http://localhost:8000'
     }
   }
 })
@@ -1135,7 +1298,7 @@ const error = ref<string | null>(null)
 
 onMounted(async () => {
   try {
-    const res = await $fetch(`${apiBase}/health`)
+    const res = await $fetch(`${apiBase}/health`, { credentials: 'include' })
     health.value = res as any
   } catch (e) {
     console.error(e)
@@ -1199,7 +1362,7 @@ const error = ref<string | null>(null)
 
 const fetchPOs = async () => {
   try {
-    const res = await $fetch<PurchaseOrder[]>(`${apiBase}/purchase-orders`)
+    const res = await $fetch<PurchaseOrder[]>(`${apiBase}/purchase-orders`, { credentials: 'include' })
     pos.value = res
   } catch (e) {
     console.error(e)
@@ -1262,19 +1425,16 @@ const login = async () => {
   error.value = null
   
   try {
-    const response = await $fetch<{access_token: string, user: any}>(`${apiBase}/auth/login`, {
+    await $fetch(`${apiBase}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      credentials: 'include',
       body: new URLSearchParams({
         username: form.value.username,
         password: form.value.password
       })
     })
-    
-    // Store token and redirect
-    const token = useCookie('access_token', { httpOnly: true })
-    token.value = response.access_token
-    
+
     await navigateTo('/')
   } catch (e: any) {
     error.value = e.data?.detail || 'Login failed'
