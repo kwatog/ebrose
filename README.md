@@ -3,6 +3,16 @@
 
 Ebrose is a comprehensive procurement tracking system built with FastAPI and Nuxt 4, featuring enterprise-grade audit logging, role-based access control, and Kubernetes deployment capabilities.
 
+## Vibe-Coded (AI-Assisted)
+
+This is a fully vibe-coded project built with AI assistance from:
+
+- OpenAI Codex (GPT-5.2)
+- Google Gemini 3 Pro
+- Anthropic Claude Sonnet
+
+Human review is still recommended for security, compliance, and production hardening.
+
 ## Features
 
 ### 🔐 Authentication & Authorization
