@@ -1,8 +1,8 @@
-{{- if and .Values.backend.enabled .Values.backend.ingress.enabled }}
-{{- $fullName := include "mazarbul.fullname" . -}}
-{{- $svcPort := .Values.backend.service.port -}}
-{{- if and .Values.backend.ingress.className (not (hasKey .Values.backend.ingress.annotations "kubernetes.io/ingress.class")) }}
-  {{- $_ := set .Values.backend.ingress.annotations "kubernetes.io/ingress.class" .Values.backend.ingress.className}}
+{{- if and .Values.frontend.enabled .Values.frontend.ingress.enabled }}
+{{- $fullName := include "ebrose.fullname" . -}}
+{{- $svcPort := .Values.frontend.service.port -}}
+{{- if and .Values.frontend.ingress.className (not (hasKey .Values.frontend.ingress.annotations "kubernetes.io/ingress.class")) }}
+  {{- $_ := set .Values.frontend.ingress.annotations "kubernetes.io/ingress.class" .Values.frontend.ingress.className}}
 {{- end }}
 {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
 apiVersion: networking.k8s.io/v1
@@ -13,20 +13,20 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ $fullName }}-backend
+  name: {{ $fullName }}-frontend
   labels:
-    {{- include "mazarbul.backend.labels" . | nindent 4 }}
-  {{- with .Values.backend.ingress.annotations }}
+    {{- include "ebrose.frontend.labels" . | nindent 4 }}
+  {{- with .Values.frontend.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- if and .Values.backend.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
-  ingressClassName: {{ .Values.backend.ingress.className }}
+  {{- if and .Values.frontend.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ .Values.frontend.ingress.className }}
   {{- end }}
-  {{- if .Values.backend.ingress.tls }}
+  {{- if .Values.frontend.ingress.tls }}
   tls:
-    {{- range .Values.backend.ingress.tls }}
+    {{- range .Values.frontend.ingress.tls }}
     - hosts:
         {{- range .hosts }}
         - {{ . | quote }}
@@ -35,7 +35,7 @@ spec:
     {{- end }}
   {{- end }}
   rules:
-    {{- range .Values.backend.ingress.hosts }}
+    {{- range .Values.frontend.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
@@ -47,11 +47,11 @@ spec:
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: {{ $fullName }}-backend
+                name: {{ $fullName }}-frontend
                 port:
                   number: {{ $svcPort }}
               {{- else }}
-              serviceName: {{ $fullName }}-backend
+              serviceName: {{ $fullName }}-frontend
               servicePort: {{ $svcPort }}
               {{- end }}
           {{- end }}

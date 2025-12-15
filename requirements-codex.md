@@ -1,4 +1,4 @@
-# Mazarbul – Codex Master Spec
+# Ebrose – Codex Master Spec
 
 > Feed this whole file to a code LLM and say:  
 > **"Read through requirements-codex.md and generate the codebase for me."**
@@ -7,7 +7,7 @@
 
 ## 0. Project Overview
 
-**Name:** Mazarbul  
+**Name:** Ebrose  
 **Domain:** Procurement & Resource Tracking  
 
 **Goal:** Replace Excel-based tracking of:
@@ -24,9 +24,9 @@
 ### 0.1 Conventions (Important)
 
 - **Dates vs datetimes:** Use ISO 8601 strings. Use `YYYY-MM-DD` for date-only fields (e.g., `start_date`, `end_date`, `gr_date`) and `YYYY-MM-DDTHH:MM:SSZ` (UTC) for audit fields (e.g., `created_at`, `updated_at`, `timestamp`).
-- **Money fields:** `estimated_cost`, `total_amount`, `amount`, `cost_per_month`, `expected_monthly_burn` should be treated as currency amounts. Prefer storing as **integer minor units** (e.g., cents) or using `Decimal` end-to-end. If using SQLite `REAL`/Python `float`, round consistently (e.g., 2dp) and avoid equality comparisons.
+- **Money fields:** `estimated_cost`, `requested_amount`, `budget_amount`, `total_amount`, `amount`, `cost_per_month`, `expected_monthly_burn` are currency amounts. **MVP choice:** store as SQLite `REAL` and use Python `Decimal` at the API boundary; round to 2dp on write and never rely on equality comparisons.
 - **Currencies:** Use ISO 4217 codes (e.g., `SGD`, `USD`) in `currency`.
-- **Record ownership:** Each business record stores `owner_group_id` (FK → `UserGroup.id`). Users gain default access via `UserGroupMembership`.
+- **Record ownership:** Each access-scoped business record stores `owner_group_id` (FK → `UserGroup.id`). Users gain default access via `UserGroupMembership`. `BusinessCase` is special: it is not access-scoped; it is readable if the user can read at least one of its line items.
 - **Enum-like fields:** Constrain `User.role` to `Admin|Manager|User|Viewer` and `RecordAccess.access_level` to `Read|Write|Full`.
 
 ---
@@ -51,7 +51,7 @@
 - requestor: text  
 - lead_group_id: int FK → UserGroup.id (the coordinating group that can edit BusinessCase-level metadata)
 - estimated_cost: float (optional; may be computed as sum of line items)
-- created_at: string (ISO date or datetime)  
+- created_at: string (ISO datetime)  
 - status: string (Draft, Submitted, Approved, Rejected, etc.)
 - created_by: int FK → User.id (audit)
 - updated_by: int FK → User.id (audit)
@@ -255,7 +255,8 @@ Alert types:
    - Condition: For a given PurchaseOrder:  
      - missing Asset, OR  
      - Asset missing WBS, OR  
-     - WBS missing BusinessCase.
+     - WBS missing BusinessCaseLineItem, OR
+     - BusinessCaseLineItem missing BusinessCase.
 
 Expose alerts via `GET /alerts`.
 
@@ -270,6 +271,7 @@ Expose alerts via `GET /alerts`.
 **Ownership Assignment Rules:**
 - For top-level records (`BudgetItem`, `BusinessCaseLineItem`, `Resource`), `owner_group_id` is required on create.
 - For child records (`WBS`, `Asset`, `PurchaseOrder`, `GoodsReceipt`, `ResourcePOAllocation`), `owner_group_id` is inherited from the parent chain; if provided by the client it must either match or be ignored/overridden by the backend.
+- If a normally-child record is created without its parent reference (e.g., `PurchaseOrder.asset_id` is null due to partial import), treat it as top-level for access purposes and require `owner_group_id` on create.
 - `BusinessCase` is an umbrella object and is not used for access scoping. It should be readable by any user who can read at least one of its `BusinessCaseLineItem` records.
 - `BusinessCase.lead_group_id` controls who can edit BusinessCase-level metadata (in addition to Manager/Admin).
 
@@ -284,22 +286,21 @@ For any record access request:
 2. Check if user is Manager → Full access to all records  
 3. If record has `owner_group_id`: check if it is one of the user's groups → allow access per role (Viewer=Read-only; User=Read/Write; delete requires Manager+)
 4. If record is `BusinessCase`: allow Read if user can Read any `BusinessCaseLineItem` where `business_case_id == BusinessCase.id`; allow Write only for `lead_group_id` members (role-capped)
-4. Check explicit RecordAccess grants for user → use highest access level (still capped by role)
-5. Check RecordAccess grants for user's groups → use highest access level (still capped by role)
-6. Deny access
+5. Check explicit RecordAccess grants for user → use highest access level (still capped by role)
+6. Check RecordAccess grants for user's groups → use highest access level (still capped by role)
+7. Deny access
 
 **Role Cap (Important):**
 - A record-level grant must not elevate a user beyond what their role allows (e.g., Viewer remains read-only even if granted Write).
 
 **Inheritance Rules:**
 - Child records inherit access from parent where logical:
-  - WBS inherits from BusinessCase
-  - Asset inherits from WBS  
+  - WBS inherits from BusinessCaseLineItem
+  - Asset inherits from WBS
   - PurchaseOrder inherits from Asset
   - GoodsReceipt inherits from PurchaseOrder
-  - ResourcePOAllocation inherits from both Resource and PurchaseOrder (intersection)
+  - ResourcePOAllocation requires access to both Resource and PurchaseOrder (intersection)
 
-**Department Consistency (Important):**
 **Group Consistency (Important):**
 - Child records must inherit the same `owner_group_id` as the parent, and writes must validate that `owner_group_id` values remain consistent across the chain.
 
@@ -346,7 +347,9 @@ Entity          | Viewer | User | Manager | Admin
 ----------------|--------|------|---------|-------
 Users           | Read   | Read | Read    | Full
 UserGroups      | Read   | Read | Full    | Full
+BudgetItem      | Read** | CRUD*| Full    | Full
 BusinessCase    | Read** | CRUD*| Full    | Full
+LineItem        | Read** | CRUD*| Full    | Full
 WBS             | Read** | CRUD*| Full    | Full
 Asset           | Read** | CRUD*| Full    | Full
 PurchaseOrder   | Read** | CRUD*| Full    | Full
@@ -400,7 +403,7 @@ All API routes except `/health` and `/auth/login` require authentication.
 Use dependency injection to check:
 1. Valid JWT token
 2. User permissions for the requested operation
-3. Department-based data access control
+3. Group / record-level access control (owner group + `RecordAccess` grants)
 
 ### 3.6 Frontend Authentication
 
@@ -676,7 +679,7 @@ import os
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./mazarbul.db")
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./ebrose.db")
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
@@ -696,9 +699,45 @@ Base = declarative_base()
 ### 5.2 SQLAlchemy Models (`backend/app/models.py`)
 
 ```python
-from sqlalchemy import Column, Integer, String, Text, Real, ForeignKey
+from sqlalchemy import Boolean, CheckConstraint, Column, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
+
 from .database import Base
+
+
+class User(Base):
+    __tablename__ = "user"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(Text, unique=True, nullable=False)
+    email = Column(Text, unique=True, nullable=False)
+    hashed_password = Column(Text, nullable=False)
+    full_name = Column(Text, nullable=False)
+    role = Column(Text, nullable=False, default="User")
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(Text)
+    last_login = Column(Text)
+
+
+class UserGroup(Base):
+    __tablename__ = "user_group"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(Text, unique=True, nullable=False)
+    description = Column(Text)
+    created_by = Column(Integer, ForeignKey("user.id"))
+    created_at = Column(Text)
+
+
+class UserGroupMembership(Base):
+    __tablename__ = "user_group_membership"
+    __table_args__ = (UniqueConstraint("user_id", "group_id", name="uq_user_group_membership"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("user.id"))
+    group_id = Column(Integer, ForeignKey("user_group.id"))
+    added_by = Column(Integer, ForeignKey("user.id"))
+    added_at = Column(Text)
 
 
 class BusinessCase(Base):
@@ -707,26 +746,79 @@ class BusinessCase(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(Text, nullable=False)
     description = Column(Text)
-    requestor = Column(String(255))
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
-    estimated_cost = Column(Real)
-    created_at = Column(String(32))
-    status = Column(String(50))
+    requestor = Column(Text)
+    lead_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
+    estimated_cost = Column(Float)
+    created_at = Column(Text)
+    status = Column(Text)
+    created_by = Column(Integer, ForeignKey("user.id"))
+    updated_by = Column(Integer, ForeignKey("user.id"))
+    updated_at = Column(Text)
 
-    wbs_items = relationship("WBS", back_populates="business_case")
+    line_items = relationship("BusinessCaseLineItem", back_populates="business_case")
+
+
+class BudgetItem(Base):
+    __tablename__ = "budget_item"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workday_ref = Column(Text, unique=True, nullable=False)
+    title = Column(Text, nullable=False)
+    description = Column(Text)
+    budget_amount = Column(Float, nullable=False)
+    currency = Column(Text, nullable=False)
+    fiscal_year = Column(Integer, nullable=False)
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
+    created_by = Column(Integer, ForeignKey("user.id"))
+    updated_by = Column(Integer, ForeignKey("user.id"))
+    created_at = Column(Text)
+    updated_at = Column(Text)
+
+    line_items = relationship("BusinessCaseLineItem", back_populates="budget_item")
+
+
+class BusinessCaseLineItem(Base):
+    __tablename__ = "business_case_line_item"
+    __table_args__ = (
+        CheckConstraint("spend_category IN ('CAPEX','OPEX')", name="ck_bcli_spend_category"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    business_case_id = Column(Integer, ForeignKey("business_case.id"), nullable=False)
+    budget_item_id = Column(Integer, ForeignKey("budget_item.id"), nullable=False)
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
+    title = Column(Text, nullable=False)
+    description = Column(Text)
+    spend_category = Column(Text, nullable=False)
+    requested_amount = Column(Float, nullable=False)
+    currency = Column(Text, nullable=False)
+    planned_commit_date = Column(Text)
+    status = Column(Text)
+    created_by = Column(Integer, ForeignKey("user.id"))
+    updated_by = Column(Integer, ForeignKey("user.id"))
+    created_at = Column(Text)
+    updated_at = Column(Text)
+
+    business_case = relationship("BusinessCase", back_populates="line_items")
+    budget_item = relationship("BudgetItem", back_populates="line_items")
+    wbs_items = relationship("WBS", back_populates="line_item")
 
 
 class WBS(Base):
     __tablename__ = "wbs"
 
     id = Column(Integer, primary_key=True, index=True)
-    business_case_id = Column(Integer, ForeignKey("business_case.id"))
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
-    wbs_code = Column(String(255), unique=True)
+    business_case_line_item_id = Column(Integer, ForeignKey("business_case_line_item.id"), nullable=False)
+    wbs_code = Column(Text, unique=True)
     description = Column(Text)
-    status = Column(String(50))
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
+    status = Column(Text)
+    created_by = Column(Integer, ForeignKey("user.id"))
+    updated_by = Column(Integer, ForeignKey("user.id"))
+    created_at = Column(Text)
+    updated_at = Column(Text)
 
-    business_case = relationship("BusinessCase", back_populates="wbs_items")
+    line_item = relationship("BusinessCaseLineItem", back_populates="wbs_items")
     assets = relationship("Asset", back_populates="wbs")
 
 
@@ -735,11 +827,15 @@ class Asset(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     wbs_id = Column(Integer, ForeignKey("wbs.id"))
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
-    asset_code = Column(String(255), unique=True)
-    asset_type = Column(String(50))
+    asset_code = Column(Text, unique=True)
+    asset_type = Column(Text)
     description = Column(Text)
-    status = Column(String(50))
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
+    status = Column(Text)
+    created_by = Column(Integer, ForeignKey("user.id"))
+    updated_by = Column(Integer, ForeignKey("user.id"))
+    created_at = Column(Text)
+    updated_at = Column(Text)
 
     wbs = relationship("WBS", back_populates="assets")
     purchase_orders = relationship("PurchaseOrder", back_populates="asset")
@@ -747,18 +843,29 @@ class Asset(Base):
 
 class PurchaseOrder(Base):
     __tablename__ = "purchase_order"
+    __table_args__ = (
+        CheckConstraint("spend_category IN ('CAPEX','OPEX')", name="ck_po_spend_category"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     asset_id = Column(Integer, ForeignKey("asset.id"))
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
-    po_number = Column(String(255), unique=True, index=True)
-    supplier = Column(String(255))
-    po_type = Column(String(50))
-    start_date = Column(String(32))
-    end_date = Column(String(32))
-    total_amount = Column(Real)
-    currency = Column(String(10))
-    status = Column(String(50))
+    po_number = Column(Text, unique=True)
+    supplier = Column(Text)
+    po_type = Column(Text)
+    start_date = Column(Text)
+    end_date = Column(Text)
+    total_amount = Column(Float)
+    currency = Column(Text)
+    spend_category = Column(Text, nullable=False)
+    planned_commit_date = Column(Text)
+    actual_commit_date = Column(Text)
+    ariba_pr_number = Column(Text)
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
+    status = Column(Text)
+    created_by = Column(Integer, ForeignKey("user.id"))
+    updated_by = Column(Integer, ForeignKey("user.id"))
+    created_at = Column(Text)
+    updated_at = Column(Text)
 
     asset = relationship("Asset", back_populates="purchase_orders")
     goods_receipts = relationship("GoodsReceipt", back_populates="po")
@@ -770,11 +877,15 @@ class GoodsReceipt(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     po_id = Column(Integer, ForeignKey("purchase_order.id"))
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
-    gr_number = Column(String(255), unique=True, index=True)
-    gr_date = Column(String(32))
-    amount = Column(Real)
+    gr_number = Column(Text, unique=True)
+    gr_date = Column(Text)
+    amount = Column(Float)
     description = Column(Text)
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
+    created_by = Column(Integer, ForeignKey("user.id"))
+    updated_by = Column(Integer, ForeignKey("user.id"))
+    created_at = Column(Text)
+    updated_at = Column(Text)
 
     po = relationship("PurchaseOrder", back_populates="goods_receipts")
 
@@ -783,14 +894,18 @@ class Resource(Base):
     __tablename__ = "resource"
 
     id = Column(Integer, primary_key=True, index=True)
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
-    name = Column(String(255))
-    vendor = Column(String(255))
-    role = Column(String(255))
-    start_date = Column(String(32))
-    end_date = Column(String(32))
-    cost_per_month = Column(Real)
-    status = Column(String(50))
+    name = Column(Text)
+    vendor = Column(Text)
+    role = Column(Text)
+    start_date = Column(Text)
+    end_date = Column(Text)
+    cost_per_month = Column(Float)
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
+    status = Column(Text)
+    created_by = Column(Integer, ForeignKey("user.id"))
+    updated_by = Column(Integer, ForeignKey("user.id"))
+    created_at = Column(Text)
+    updated_at = Column(Text)
 
     allocations = relationship("ResourcePOAllocation", back_populates="resource")
 
@@ -801,13 +916,53 @@ class ResourcePOAllocation(Base):
     id = Column(Integer, primary_key=True, index=True)
     resource_id = Column(Integer, ForeignKey("resource.id"))
     po_id = Column(Integer, ForeignKey("purchase_order.id"))
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"))
-    allocation_start = Column(String(32))
-    allocation_end = Column(String(32))
-    expected_monthly_burn = Column(Real)
+    allocation_start = Column(Text)
+    allocation_end = Column(Text)
+    expected_monthly_burn = Column(Float)
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
+    created_by = Column(Integer, ForeignKey("user.id"))
+    updated_by = Column(Integer, ForeignKey("user.id"))
+    created_at = Column(Text)
+    updated_at = Column(Text)
 
     resource = relationship("Resource", back_populates="allocations")
     po = relationship("PurchaseOrder", back_populates="allocations")
+
+
+class RecordAccess(Base):
+    __tablename__ = "record_access"
+    __table_args__ = (
+        CheckConstraint(
+            "(user_id IS NOT NULL AND group_id IS NULL) OR (user_id IS NULL AND group_id IS NOT NULL)",
+            name="ck_record_access_target",
+        ),
+        CheckConstraint("access_level IN ('Read','Write','Full')", name="ck_record_access_level"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    record_type = Column(Text, nullable=False)
+    record_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id"))
+    group_id = Column(Integer, ForeignKey("user_group.id"))
+    access_level = Column(Text, nullable=False)
+    granted_by = Column(Integer, ForeignKey("user.id"))
+    granted_at = Column(Text)
+    expires_at = Column(Text)
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    table_name = Column(Text, nullable=False)
+    record_id = Column(Integer, nullable=False)
+    action = Column(Text, nullable=False)
+    old_values = Column(Text)
+    new_values = Column(Text)
+    user_id = Column(Integer, ForeignKey("user.id"))
+    timestamp = Column(Text, nullable=False)
+    ip_address = Column(Text)
+    user_agent = Column(Text)
 ```
 
 ### 5.3 Pydantic Schemas Example (`backend/app/schemas.py` – PurchaseOrder)
@@ -818,7 +973,8 @@ from typing import Optional
 
 
 class PurchaseOrderBase(BaseModel):
-    asset_id: int
+    asset_id: Optional[int] = None
+    owner_group_id: Optional[int] = None
     po_number: str
     supplier: Optional[str] = None
     po_type: Optional[str] = None
@@ -826,6 +982,10 @@ class PurchaseOrderBase(BaseModel):
     end_date: Optional[str] = None
     total_amount: float
     currency: str
+    spend_category: str  # CAPEX|OPEX
+    planned_commit_date: Optional[str] = None
+    actual_commit_date: Optional[str] = None
+    ariba_pr_number: Optional[str] = None
     status: Optional[str] = "Open"
 
 
@@ -838,13 +998,13 @@ class PurchaseOrder(PurchaseOrderBase):
 
     class Config:
         orm_mode = True
-
-Note: `owner_group_id` is stored on `PurchaseOrder` in the database, but should be derived from the parent `Asset` during create/update to keep the chain consistent.
-
-# If using Pydantic v2, use:
-# from pydantic import ConfigDict
-# model_config = ConfigDict(from_attributes=True)
 ```
+
+Note: `owner_group_id` is stored on `PurchaseOrder` in the database. When `asset_id` is present, derive/override `owner_group_id` from the parent `Asset` during create/update to keep the chain consistent.
+
+If `asset_id` is null (partial import), require `owner_group_id` from the client and treat the PurchaseOrder as top-level for access control.
+
+If using Pydantic v2, replace `class Config: orm_mode = True` with `model_config = ConfigDict(from_attributes=True)`.
 
 ### 5.4 Main App (`backend/app/main.py`)
 
@@ -857,7 +1017,7 @@ from . import models, schemas
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Mazarbul API")
+app = FastAPI(title="Ebrose API")
 
 
 def get_db():
@@ -870,7 +1030,7 @@ def get_db():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "mazarbul"}
+    return {"status": "ok", "service": "ebrose"}
 
 
 @app.post("/purchase-orders", response_model=schemas.PurchaseOrder)
@@ -935,7 +1095,7 @@ def delete_purchase_order(po_id: int, db: Session = Depends(get_db)):
     return {"status": "deleted"}
 ```
 
-Routers needed: business-cases, wbs, assets, purchase-orders, goods-receipts, resources, allocations, alerts, auth, user-groups, record-access, audit-logs.
+Routers needed: budget-items, business-cases, business-case-line-items, wbs, assets, purchase-orders, goods-receipts, resources, allocations, alerts, auth, user-groups, record-access, audit-logs.
 
 ### 5.6 Authentication Dependencies (`backend/app/auth.py`)
 
@@ -1043,6 +1203,27 @@ def check_record_access(record_type: str, record_id: int, required_access: str):
         record = db.query(getattr(models, record_type)).get(record_id)
         if not record:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Record not found")
+
+        user_groups = db.query(models.UserGroupMembership).filter(
+            models.UserGroupMembership.user_id == current_user.id
+        ).all()
+
+        user_group_ids = {m.group_id for m in user_groups}
+
+        # BusinessCase is not access-scoped; Read is allowed if the user can read at least one line item.
+        # (For a complete implementation, include cases where line items are readable via RecordAccess grants.)
+        # Write is allowed only for members of BusinessCase.lead_group_id (still role-capped).
+        if record_type == "BusinessCase":
+            if required_access == "Read":
+                has_owned_line_item = db.query(models.BusinessCaseLineItem.id).filter(
+                    models.BusinessCaseLineItem.business_case_id == record_id,
+                    models.BusinessCaseLineItem.owner_group_id.in_(user_group_ids),
+                ).first()
+                if has_owned_line_item:
+                    return current_user
+
+            if required_access in ["Write", "Full"] and record.lead_group_id in user_group_ids:
+                return current_user
             
         # Check explicit record access grants
         access_levels = {"Read": 0, "Write": 1, "Full": 2}
@@ -1060,10 +1241,6 @@ def check_record_access(record_type: str, record_id: int, required_access: str):
             return current_user
             
         # Check group access
-        user_groups = db.query(models.UserGroupMembership).filter(
-            models.UserGroupMembership.user_id == current_user.id
-        ).all()
-        
         for membership in user_groups:
             group_access = db.query(models.RecordAccess).filter(
                 models.RecordAccess.record_type == record_type,
@@ -1076,13 +1253,6 @@ def check_record_access(record_type: str, record_id: int, required_access: str):
                 return current_user
 
         # Default group access: records belong to an owning group, not an individual user
-        user_group_ids = {
-            m.group_id
-            for m in db.query(models.UserGroupMembership).filter(
-                models.UserGroupMembership.user_id == current_user.id
-            )
-        }
-
         if hasattr(record, 'owner_group_id') and record.owner_group_id in user_group_ids:
             if current_user.role == "Viewer" and required_access == "Read":
                 return current_user
@@ -1135,9 +1305,9 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   app: {
     head: {
-      title: 'Mazarbul',
+      title: 'Ebrose',
       meta: [
-        { name: 'description', content: 'Mazarbul - Chamber of Spend Records' }
+        { name: 'description', content: 'Ebrose - procurement and budget tracking' }
       ]
     }
   },
@@ -1260,7 +1430,7 @@ a:hover {
   <div>
     <header class="header">
       <div>
-        <div class="header-title">Mazarbul</div>
+        <div class="header-title">Ebrose</div>
         <div class="header-sub">Chamber of Spend Records</div>
       </div>
       <nav>
@@ -1312,7 +1482,7 @@ onMounted(async () => {
 <template>
   <section class="grid">
     <div class="card">
-      <h1 class="card-title">Welcome to Mazarbul</h1>
+      <h1 class="card-title">Welcome to Ebrose</h1>
       <p class="card-sub">
         Track Business Cases, Purchase Orders, Resources, and Goods Receipts — without fighting Excel.
       </p>
@@ -1447,7 +1617,7 @@ const login = async () => {
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h1 class="card-title">Welcome to Mazarbul</h1>
+      <h1 class="card-title">Welcome to Ebrose</h1>
       <p class="card-sub">Please sign in to continue</p>
       
       <form @submit.prevent="login" class="login-form">

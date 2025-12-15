@@ -1,0 +1,16 @@
+apiVersion: v2
+name: ebrose
+description: Ebrose Procurement Tracking System
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - procurement
+  - tracking
+  - fastapi
+  - nuxt
+home: https://github.com/kwatog/ebrose
+sources:
+  - https://github.com/kwatog/ebrose
+maintainers:
+  - name: Ebrose Team
+    email: admin@ebrose.local

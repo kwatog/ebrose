@@ -1,8 +1,8 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: mazarbul
-  title: Mazarbul
+  name: ebrose
+  title: Ebrose
   description: Procurement + budget tracking (FastAPI + Nuxt) with audit logging and access control.
   tags:
     - fastapi

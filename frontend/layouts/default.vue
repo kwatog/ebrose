@@ -25,7 +25,7 @@ const isAdminOrManager = computed(() => {
   <div>
     <header class="header" v-if="$route.path !== '/login'">
       <div>
-        <div class="header-title">Mazarbul</div>
+        <div class="header-title">Ebrose</div>
         <div class="header-sub">Chamber of Spend Records</div>
       </div>
       <div class="flex items-center gap-4">

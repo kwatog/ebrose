@@ -1,4 +1,4 @@
-# Mazarbul Code Review and Improvements
+# Ebrose Code Review and Improvements
 
 This document captures a focused review of `requirements-codex.md` and the current codebase, with concrete, high‑impact recommendations.
 
@@ -57,7 +57,7 @@ This document captures a focused review of `requirements-codex.md` and the curre
 - Helm chart [RESOLVED]: Templates added for Deployments/Services/Ingress/HPA/PVC/ServiceAccounts.
 - Config as env [RESOLVED]: Backend reads key env vars; frontend already supports `NUXT_*` API base.
 - Jenkinsfile [INFO]: Pipeline assumes charts exist (now present). Keep validation steps to fail fast on misconfig.
-- Artifacts [PARTIAL]: `mazarbul.db` exists locally but is not committed (ignored). Ensure DB files never enter VCS.
+- Artifacts [PARTIAL]: `ebrose.db` exists locally but is not committed (ignored). Ensure DB files never enter VCS.
 
 ## Data Model
 - Required fields [OPEN]: Enforce NOT NULL where implied (e.g., `po_number`, dates). Add indexes on `po_number`, `wbs_code`, `asset_code`.

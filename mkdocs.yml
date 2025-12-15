@@ -1,4 +1,4 @@
-site_name: Mazarbul
+site_name: Ebrose
 site_description: Procurement and budget tracking system
 
 nav:
@@ -11,4 +11,3 @@ nav:
 
 plugins:
   - techdocs-core
-

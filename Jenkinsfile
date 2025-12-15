@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         DOCKER_REGISTRY = credentials('docker-registry')
-        DOCKER_REPO = 'mazarbul'
+        DOCKER_REPO = 'ebrose'
         KUBECONFIG = credentials('kubeconfig')
         HELM_CHART_VERSION = "${env.BUILD_NUMBER}"
     }
@@ -122,7 +122,7 @@ pipeline {
                     def helmValues = []
                     
                     // Environment-specific values
-                    def valuesFile = "helm/mazarbul/values-${DEPLOYMENT_TARGET}.yaml"
+                    def valuesFile = "helm/ebrose/values-${DEPLOYMENT_TARGET}.yaml"
                     if (fileExists(valuesFile)) {
                         helmValues.add("-f ${valuesFile}")
                     }
@@ -143,8 +143,8 @@ pipeline {
                     helmValues.add("--set global.imageRegistry=${DOCKER_REGISTRY}")
                     
                     def helmCommand = """
-                        helm upgrade --install mazarbul-${DEPLOYMENT_TARGET} ./helm/mazarbul \\
-                            --namespace mazarbul-${DEPLOYMENT_TARGET} \\
+                        helm upgrade --install ebrose-${DEPLOYMENT_TARGET} ./helm/ebrose \\
+                            --namespace ebrose-${DEPLOYMENT_TARGET} \\
                             --create-namespace \\
                             ${helmValues.join(' ')} \\
                             --wait \\
@@ -160,16 +160,16 @@ pipeline {
             steps {
                 script {
                     sh """
-                        kubectl get pods -n mazarbul-${DEPLOYMENT_TARGET}
-                        kubectl get services -n mazarbul-${DEPLOYMENT_TARGET}
+                        kubectl get pods -n ebrose-${DEPLOYMENT_TARGET}
+                        kubectl get services -n ebrose-${DEPLOYMENT_TARGET}
                         
                         # Wait for deployments to be ready
                         if [ "${params.DEPLOY_BACKEND}" = "true" ]; then
-                            kubectl rollout status deployment/mazarbul-${DEPLOYMENT_TARGET}-backend -n mazarbul-${DEPLOYMENT_TARGET}
+                            kubectl rollout status deployment/ebrose-${DEPLOYMENT_TARGET}-backend -n ebrose-${DEPLOYMENT_TARGET}
                         fi
                         
                         if [ "${params.DEPLOY_FRONTEND}" = "true" ]; then
-                            kubectl rollout status deployment/mazarbul-${DEPLOYMENT_TARGET}-frontend -n mazarbul-${DEPLOYMENT_TARGET}
+                            kubectl rollout status deployment/ebrose-${DEPLOYMENT_TARGET}-frontend -n ebrose-${DEPLOYMENT_TARGET}
                         fi
                     """
                 }
@@ -186,10 +186,10 @@ pipeline {
                         sh """
                             # Wait for backend to be ready and test health endpoint
                             echo "Testing backend health endpoint..."
-                            kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=backend -n mazarbul-${DEPLOYMENT_TARGET} --timeout=300s
+                            kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=backend -n ebrose-${DEPLOYMENT_TARGET} --timeout=300s
                             
                             # Port-forward and test (or use ingress URL if available)
-                            kubectl port-forward svc/mazarbul-${DEPLOYMENT_TARGET}-backend 8080:8000 -n mazarbul-${DEPLOYMENT_TARGET} &
+                            kubectl port-forward svc/ebrose-${DEPLOYMENT_TARGET}-backend 8080:8000 -n ebrose-${DEPLOYMENT_TARGET} &
                             KUBECTL_PID=\$!
                             sleep 10
                             
@@ -202,10 +202,10 @@ pipeline {
                         sh """
                             # Test frontend availability
                             echo "Testing frontend availability..."
-                            kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=frontend -n mazarbul-${DEPLOYMENT_TARGET} --timeout=300s
+                            kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=frontend -n ebrose-${DEPLOYMENT_TARGET} --timeout=300s
                             
                             # Port-forward and test (or use ingress URL if available)
-                            kubectl port-forward svc/mazarbul-${DEPLOYMENT_TARGET}-frontend 3080:3000 -n mazarbul-${DEPLOYMENT_TARGET} &
+                            kubectl port-forward svc/ebrose-${DEPLOYMENT_TARGET}-frontend 3080:3000 -n ebrose-${DEPLOYMENT_TARGET} &
                             KUBECTL_PID=\$!
                             sleep 10
                             
@@ -235,7 +235,7 @@ pipeline {
                     slackSend(
                         channel: '#deployments',
                         color: 'good',
-                        message: "✅ Mazarbul production deployment successful! Version: ${IMAGE_TAG}"
+                        message: "✅ Ebrose production deployment successful! Version: ${IMAGE_TAG}"
                     )
                 }
             }
@@ -248,7 +248,7 @@ pipeline {
                 slackSend(
                     channel: '#deployments',
                     color: 'danger',
-                    message: "❌ Mazarbul ${params.DEPLOYMENT_TARGET} deployment failed! Build: ${env.BUILD_URL}"
+                    message: "❌ Ebrose ${params.DEPLOYMENT_TARGET} deployment failed! Build: ${env.BUILD_URL}"
                 )
             }
         }

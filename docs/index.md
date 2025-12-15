@@ -1,6 +1,6 @@
-# Mazarbul (TechDocs)
+# Ebrose (TechDocs)
 
-Mazarbul is a procurement and budget tracking system:
+Ebrose is a procurement and budget tracking system:
 
 - Backend: FastAPI + SQLAlchemy + SQLite
 - Frontend: Nuxt (Vue)
@@ -18,4 +18,3 @@ Mazarbul is a procurement and budget tracking system:
 The repository contains working backend routers and a Nuxt UI with admin pages.
 
 Planned evolution (in `requirements-codex.md`) includes Workday-style budget items and business-case line items; align the implementation to the updated spec before building the budget dashboard.
-

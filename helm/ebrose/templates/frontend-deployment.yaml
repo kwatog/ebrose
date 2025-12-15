@@ -2,16 +2,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "mazarbul.fullname" . }}-frontend
+  name: {{ include "ebrose.fullname" . }}-frontend
   labels:
-    {{- include "mazarbul.frontend.labels" . | nindent 4 }}
+    {{- include "ebrose.frontend.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.frontend.autoscaling.enabled }}
   replicas: {{ .Values.frontend.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "mazarbul.frontend.selectorLabels" . | nindent 6 }}
+      {{- include "ebrose.frontend.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.frontend.podAnnotations }}
@@ -19,20 +19,20 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "mazarbul.frontend.selectorLabels" . | nindent 8 }}
+        {{- include "ebrose.frontend.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "mazarbul.frontend.serviceAccountName" . }}
+      serviceAccountName: {{ include "ebrose.frontend.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.frontend.podSecurityContext | nindent 8 }}
       containers:
         - name: frontend
           securityContext:
             {{- toYaml .Values.frontend.securityContext | nindent 12 }}
-          image: {{ include "mazarbul.frontend.image" . }}
+          image: {{ include "ebrose.frontend.image" . }}
           imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
           {{- if .Values.frontend.command }}
           command:
@@ -48,7 +48,7 @@ spec:
               value: {{ $value | quote }}
             {{- end }}
             - name: NUXT_PUBLIC_API_BASE
-              value: "http://{{ include "mazarbul.fullname" . }}-backend:{{ .Values.backend.service.port }}"
+              value: "http://{{ include "ebrose.fullname" . }}-backend:{{ .Values.backend.service.port }}"
           {{- if .Values.frontend.healthCheck.enabled }}
           livenessProbe:
             httpGet:

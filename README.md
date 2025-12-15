@@ -1,7 +1,7 @@
-# Mazarbul
+# Ebrose
 ## Procurement Tracking System
 
-Mazarbul is a comprehensive procurement tracking system built with FastAPI and Nuxt 4, featuring enterprise-grade audit logging, role-based access control, and Kubernetes deployment capabilities.
+Ebrose is a comprehensive procurement tracking system built with FastAPI and Nuxt 4, featuring enterprise-grade audit logging, role-based access control, and Kubernetes deployment capabilities.
 
 ## Features
 
@@ -42,8 +42,8 @@ Mazarbul is a comprehensive procurement tracking system built with FastAPI and N
 ### Using Docker Compose (Recommended)
 
 ```bash
-git clone https://github.com/kwatog/mazarbul.git
-cd mazarbul
+git clone https://github.com/kwatog/ebrose.git
+cd ebrose
 docker-compose up --build
 ```
 
@@ -80,10 +80,10 @@ npm run dev
 ### Quick Deploy
 ```bash
 # Build and push images
-docker build -t your-registry/mazarbul/backend:latest ./backend
-docker build -t your-registry/mazarbul/frontend:latest ./frontend
-docker push your-registry/mazarbul/backend:latest
-docker push your-registry/mazarbul/frontend:latest
+docker build -t your-registry/ebrose/backend:latest ./backend
+docker build -t your-registry/ebrose/frontend:latest ./frontend
+docker push your-registry/ebrose/backend:latest
+docker push your-registry/ebrose/frontend:latest
 
 # Deploy to development
 ./k8s/development-deploy.sh
@@ -93,37 +93,37 @@ docker push your-registry/mazarbul/frontend:latest
 
 #### Development
 ```bash
-helm install mazarbul-dev ./helm/mazarbul \
-  --namespace mazarbul-development \
+helm install ebrose-dev ./helm/ebrose \
+  --namespace ebrose-development \
   --create-namespace \
-  -f ./helm/mazarbul/values-development.yaml
+  -f ./helm/ebrose/values-development.yaml
 ```
 
 #### Staging
 ```bash
-helm install mazarbul-staging ./helm/mazarbul \
-  --namespace mazarbul-staging \
+helm install ebrose-staging ./helm/ebrose \
+  --namespace ebrose-staging \
   --create-namespace \
-  -f ./helm/mazarbul/values-staging.yaml
+  -f ./helm/ebrose/values-staging.yaml
 ```
 
 #### Production
 ```bash
-helm install mazarbul-prod ./helm/mazarbul \
-  --namespace mazarbul-production \
+helm install ebrose-prod ./helm/ebrose \
+  --namespace ebrose-production \
   --create-namespace \
-  -f ./helm/mazarbul/values-production.yaml
+  -f ./helm/ebrose/values-production.yaml
 ```
 
 ### Independent Component Deployment
 ```bash
 # Deploy only backend
-helm install mazarbul ./helm/mazarbul \
+helm install ebrose ./helm/ebrose \
   --set backend.enabled=true \
   --set frontend.enabled=false
 
 # Deploy only frontend
-helm install mazarbul ./helm/mazarbul \
+helm install ebrose ./helm/ebrose \
   --set backend.enabled=false \
   --set frontend.enabled=true
 ```
@@ -211,10 +211,10 @@ All entities include comprehensive audit tracking with created/updated timestamp
 
 ```bash
 # Manual scaling
-kubectl scale deployment mazarbul-backend --replicas=5
+kubectl scale deployment ebrose-backend --replicas=5
 
 # Auto-scaling
-helm upgrade mazarbul ./helm/mazarbul \
+helm upgrade ebrose ./helm/ebrose \
   --set backend.autoscaling.enabled=true \
   --set backend.autoscaling.minReplicas=2 \
   --set backend.autoscaling.maxReplicas=10

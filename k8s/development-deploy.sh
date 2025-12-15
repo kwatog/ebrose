@@ -1,19 +1,19 @@
 #!/bin/bash
 
-# Development deployment script for Mazarbul
+# Development deployment script for Ebrose
 set -e
 
-NAMESPACE="mazarbul-development"
-CHART_PATH="./helm/mazarbul"
-VALUES_FILE="./helm/mazarbul/values-development.yaml"
+NAMESPACE="ebrose-development"
+CHART_PATH="./helm/ebrose"
+VALUES_FILE="./helm/ebrose/values-development.yaml"
 
-echo "🚀 Deploying Mazarbul to development environment..."
+echo "🚀 Deploying Ebrose to development environment..."
 
 # Create namespace if it doesn't exist
 kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
 
 # Deploy using Helm
-helm upgrade --install mazarbul-dev $CHART_PATH \
+helm upgrade --install ebrose-dev $CHART_PATH \
     --namespace $NAMESPACE \
     --values $VALUES_FILE \
     --set backend.image.tag=development-latest \
@@ -30,5 +30,5 @@ echo "Pods:"
 kubectl get pods -n $NAMESPACE
 echo ""
 echo "🔗 Access the application:"
-echo "   Frontend: kubectl port-forward -n $NAMESPACE svc/mazarbul-dev-frontend 3000:3000"
-echo "   Backend:  kubectl port-forward -n $NAMESPACE svc/mazarbul-dev-backend 8000:8000"
+echo "   Frontend: kubectl port-forward -n $NAMESPACE svc/ebrose-dev-frontend 3000:3000"
+echo "   Backend:  kubectl port-forward -n $NAMESPACE svc/ebrose-dev-backend 8000:8000"

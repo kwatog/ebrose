@@ -2,9 +2,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "mazarbul.fullname" . }}-frontend
+  name: {{ include "ebrose.fullname" . }}-frontend
   labels:
-    {{- include "mazarbul.frontend.labels" . | nindent 4 }}
+    {{- include "ebrose.frontend.labels" . | nindent 4 }}
   {{- with .Values.frontend.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -17,5 +17,5 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "mazarbul.frontend.selectorLabels" . | nindent 4 }}
+    {{- include "ebrose.frontend.selectorLabels" . | nindent 4 }}
 {{- end }}

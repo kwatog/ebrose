@@ -25,7 +25,7 @@ onMounted(async () => {
 <template>
   <section class="grid">
     <div class="card">
-      <h1 class="card-title">Welcome to Mazarbul</h1>
+      <h1 class="card-title">Welcome to Ebrose</h1>
       <p class="card-sub">
         Track Business Cases, Purchase Orders, Resources, and Goods Receipts — without fighting Excel.
       </p>

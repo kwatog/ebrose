@@ -25,11 +25,11 @@ backend:
       
   env:
     SECRET_KEY: "staging-secret-key-change-me"
-    DATABASE_URL: "sqlite:///./data/mazarbul-staging.db"
+    DATABASE_URL: "sqlite:///./data/ebrose-staging.db"
     
   corsOrigins:
-    - "https://staging.mazarbul.com"
-    - "https://api-staging.mazarbul.com"
+    - "https://staging.ebrose.com"
+    - "https://api-staging.ebrose.com"
     
   ingress:
     enabled: true
@@ -38,14 +38,14 @@ backend:
       nginx.ingress.kubernetes.io/rewrite-target: /
       cert-manager.io/cluster-issuer: "letsencrypt-staging"
     hosts:
-      - host: api-staging.mazarbul.com
+      - host: api-staging.ebrose.com
         paths:
           - path: /
             pathType: Prefix
     tls:
-      - secretName: mazarbul-api-staging-tls
+      - secretName: ebrose-api-staging-tls
         hosts:
-          - api-staging.mazarbul.com
+          - api-staging.ebrose.com
 
 frontend:
   replicaCount: 2
@@ -75,11 +75,11 @@ frontend:
       nginx.ingress.kubernetes.io/rewrite-target: /
       cert-manager.io/cluster-issuer: "letsencrypt-staging"
     hosts:
-      - host: staging.mazarbul.com
+      - host: staging.ebrose.com
         paths:
           - path: /
             pathType: Prefix
     tls:
-      - secretName: mazarbul-frontend-staging-tls
+      - secretName: ebrose-frontend-staging-tls
         hosts:
-          - staging.mazarbul.com
+          - staging.ebrose.com

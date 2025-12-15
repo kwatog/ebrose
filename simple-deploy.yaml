@@ -1,22 +1,22 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: mazarbul-dev
+  name: ebrose-dev
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mazarbul-backend
-  namespace: mazarbul-dev
+  name: ebrose-backend
+  namespace: ebrose-dev
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mazarbul-backend
+      app: ebrose-backend
   template:
     metadata:
       labels:
-        app: mazarbul-backend
+        app: ebrose-backend
     spec:
       containers:
       - name: backend
@@ -26,7 +26,7 @@ spec:
         - -c
         - |
           apt-get update && apt-get install -y gcc curl git
-          git clone https://github.com/kwatog/mazarbul.git /app
+          git clone https://github.com/kwatog/ebrose.git /app
           cd /app/backend
           pip install -r requirements.txt
           mkdir -p data
@@ -36,7 +36,7 @@ spec:
         - containerPort: 8000
         env:
         - name: DATABASE_URL
-          value: "sqlite:////app/backend/data/mazarbul.db"
+          value: "sqlite:////app/backend/data/ebrose.db"
         - name: SECRET_KEY
           value: "minikube-dev-secret-key"
         - name: ACCESS_TOKEN_EXPIRE_MINUTES
@@ -60,11 +60,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mazarbul-backend
-  namespace: mazarbul-dev
+  name: ebrose-backend
+  namespace: ebrose-dev
 spec:
   selector:
-    app: mazarbul-backend
+    app: ebrose-backend
   ports:
   - port: 8000
     targetPort: 8000
@@ -74,17 +74,17 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mazarbul-frontend
-  namespace: mazarbul-dev
+  name: ebrose-frontend
+  namespace: ebrose-dev
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mazarbul-frontend
+      app: ebrose-frontend
   template:
     metadata:
       labels:
-        app: mazarbul-frontend
+        app: ebrose-frontend
     spec:
       containers:
       - name: frontend
@@ -94,13 +94,13 @@ spec:
         - -c
         - |
           apk add --no-cache git curl
-          git clone https://github.com/kwatog/mazarbul.git /app
+          git clone https://github.com/kwatog/ebrose.git /app
           cd /app/frontend
           echo "Installing dependencies..."
           npm install
           echo "Building frontend..."
           # Backend URL for Server-Side Rendering (within Cluster)
-          export NUXT_API_BASE=http://mazarbul-backend:8000
+          export NUXT_API_BASE=http://ebrose-backend:8000
           # Backend URL for Client-Side Browser (Minikube IP)
           export NUXT_PUBLIC_API_BASE=http://192.168.49.2:30080
           npm run build
@@ -124,11 +124,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mazarbul-frontend
-  namespace: mazarbul-dev
+  name: ebrose-frontend
+  namespace: ebrose-dev
 spec:
   selector:
-    app: mazarbul-frontend
+    app: ebrose-frontend
   ports:
   - port: 3000
     targetPort: 3000

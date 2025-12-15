@@ -5,11 +5,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: mazarbul_backend
+    container_name: ebrose_backend
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite:///./data/mazarbul.db
+      - DATABASE_URL=sqlite:///./data/ebrose.db
       - SECRET_KEY=local-development-secret-change-me
       - ACCESS_TOKEN_EXPIRE_MINUTES=1440
     volumes:
@@ -26,7 +26,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: mazarbul_frontend
+    container_name: ebrose_frontend
     ports:
       - "3000:3000"
     environment:

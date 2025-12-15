@@ -25,12 +25,12 @@ backend:
       
   env:
     SECRET_KEY: "REPLACE-WITH-SECURE-SECRET-KEY"
-    DATABASE_URL: "postgresql://user:password@postgres-service:5432/mazarbul_prod"
+    DATABASE_URL: "postgresql://user:password@postgres-service:5432/ebrose_prod"
     
   corsOrigins:
-    - "https://mazarbul.com"
-    - "https://www.mazarbul.com"
-    - "https://api.mazarbul.com"
+    - "https://ebrose.com"
+    - "https://www.ebrose.com"
+    - "https://api.ebrose.com"
     
   ingress:
     enabled: true
@@ -40,14 +40,14 @@ backend:
       cert-manager.io/cluster-issuer: "letsencrypt-prod"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
     hosts:
-      - host: api.mazarbul.com
+      - host: api.ebrose.com
         paths:
           - path: /
             pathType: Prefix
     tls:
-      - secretName: mazarbul-api-prod-tls
+      - secretName: ebrose-api-prod-tls
         hosts:
-          - api.mazarbul.com
+          - api.ebrose.com
           
   # Production persistence
   persistence:
@@ -84,16 +84,16 @@ frontend:
       cert-manager.io/cluster-issuer: "letsencrypt-prod"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
     hosts:
-      - host: mazarbul.com
+      - host: ebrose.com
         paths:
           - path: /
             pathType: Prefix
-      - host: www.mazarbul.com
+      - host: www.ebrose.com
         paths:
           - path: /
             pathType: Prefix
     tls:
-      - secretName: mazarbul-frontend-prod-tls
+      - secretName: ebrose-frontend-prod-tls
         hosts:
-          - mazarbul.com
-          - www.mazarbul.com
+          - ebrose.com
+          - www.ebrose.com

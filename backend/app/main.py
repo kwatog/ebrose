@@ -23,7 +23,7 @@ from .routers import (
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Mazarbul API", debug=True)
+app = FastAPI(title="Ebrose API", debug=True)
 
 # Enable CORS for frontend
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
@@ -50,7 +50,7 @@ def get_db():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "mazarbul"}
+    return {"status": "ok", "service": "ebrose"}
 
 app.include_router(auth_router.router)
 app.include_router(users.router)
@@ -83,7 +83,7 @@ def create_default_admin():
             # Get admin credentials from environment
             admin_username = os.getenv("ADMIN_USERNAME", "admin")
             admin_password = os.getenv("ADMIN_PASSWORD")
-            admin_email = os.getenv("ADMIN_EMAIL", "admin@mazarbul.com")
+            admin_email = os.getenv("ADMIN_EMAIL", "admin@ebrose.local")
             admin_full_name = os.getenv("ADMIN_FULL_NAME", "System Administrator")
             
             if not admin_password:

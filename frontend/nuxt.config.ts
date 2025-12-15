@@ -3,9 +3,9 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   app: {
     head: {
-      title: 'Mazarbul',
+      title: 'Ebrose',
       meta: [
-        { name: 'description', content: 'Mazarbul - Chamber of Spend Records' }
+        { name: 'description', content: 'Ebrose - Chamber of Spend Records' }
       ]
     }
   },

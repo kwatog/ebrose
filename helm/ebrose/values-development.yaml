@@ -19,11 +19,11 @@ backend:
       
   env:
     SECRET_KEY: "development-secret-key"
-    DATABASE_URL: "sqlite:///./data/mazarbul-dev.db"
+    DATABASE_URL: "sqlite:///./data/ebrose-dev.db"
     
   corsOrigins:
-    - "http://dev.mazarbul.local"
-    - "http://api-dev.mazarbul.local"
+    - "http://dev.ebrose.local"
+    - "http://api-dev.ebrose.local"
     - "http://localhost:3000"
     
   ingress:
@@ -32,7 +32,7 @@ backend:
     annotations:
       nginx.ingress.kubernetes.io/rewrite-target: /
     hosts:
-      - host: api-dev.mazarbul.local
+      - host: api-dev.ebrose.local
         paths:
           - path: /
             pathType: Prefix
@@ -58,7 +58,7 @@ frontend:
     annotations:
       nginx.ingress.kubernetes.io/rewrite-target: /
     hosts:
-      - host: dev.mazarbul.local
+      - host: dev.ebrose.local
         paths:
           - path: /
             pathType: Prefix

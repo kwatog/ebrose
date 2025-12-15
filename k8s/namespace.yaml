@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: mazarbul-development
+  name: ebrose-development
   labels:
-    name: mazarbul-development
+    name: ebrose-development
     environment: development

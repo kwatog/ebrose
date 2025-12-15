@@ -1,6 +1,6 @@
-# 🎉 Mazarbul Successfully Deployed to Minikube!
+# 🎉 Ebrose Successfully Deployed to Minikube!
 
-Your Mazarbul procurement tracking system is now running on your Minikube cluster with all security improvements implemented.
+Your Ebrose procurement tracking system is now running on your Minikube cluster with all security improvements implemented.
 
 ## ✅ Deployment Status
 
@@ -44,40 +44,40 @@ The services are accessible via port forwarding:
 ### Check Status
 ```bash
 # Pod status
-kubectl get pods -n mazarbul-dev
+kubectl get pods -n ebrose-dev
 
 # Service status  
-kubectl get svc -n mazarbul-dev
+kubectl get svc -n ebrose-dev
 
 # Detailed pod info
-kubectl describe pods -n mazarbul-dev
+kubectl describe pods -n ebrose-dev
 ```
 
 ### View Logs
 ```bash
 # Backend logs
-kubectl logs deployment/mazarbul-backend -n mazarbul-dev -f
+kubectl logs deployment/ebrose-backend -n ebrose-dev -f
 
 # Frontend logs
-kubectl logs deployment/mazarbul-frontend -n mazarbul-dev -f
+kubectl logs deployment/ebrose-frontend -n ebrose-dev -f
 ```
 
 ### Port Forwarding (if needed)
 ```bash
 # Backend API
-kubectl port-forward service/mazarbul-backend 8000:8000 -n mazarbul-dev
+kubectl port-forward service/ebrose-backend 8000:8000 -n ebrose-dev
 
 # Frontend
-kubectl port-forward service/mazarbul-frontend 3000:3000 -n mazarbul-dev
+kubectl port-forward service/ebrose-frontend 3000:3000 -n ebrose-dev
 ```
 
 ### Restart Services
 ```bash
 # Restart backend
-kubectl rollout restart deployment/mazarbul-backend -n mazarbul-dev
+kubectl rollout restart deployment/ebrose-backend -n ebrose-dev
 
 # Restart frontend  
-kubectl rollout restart deployment/mazarbul-frontend -n mazarbul-dev
+kubectl rollout restart deployment/ebrose-frontend -n ebrose-dev
 ```
 
 ## 🔐 Security Features Deployed
@@ -146,4 +146,4 @@ All implemented security improvements are active:
 4. **Change Admin Password**: Update in admin settings for security
 5. **Create Users**: Add team members with appropriate roles
 
-Your Mazarbul system is ready for use with enterprise-grade security and full audit compliance! 🚀
+Your Ebrose system is ready for use with enterprise-grade security and full audit compliance! 🚀

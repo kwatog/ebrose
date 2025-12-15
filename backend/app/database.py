@@ -2,7 +2,7 @@ import os
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///../mazarbul.db")
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///../ebrose.db")
 
 # Handle SQLite specific configuration
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):

@@ -1,4 +1,4 @@
-# Mazarbul Implementation Plan
+# Ebrose Implementation Plan
 
 Based on the recommendations in `RECOMMENDATIONS.md`, this plan addresses identified gaps in priority order from security critical to quality improvements.
 

@@ -2,16 +2,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "mazarbul.fullname" . }}-backend
+  name: {{ include "ebrose.fullname" . }}-backend
   labels:
-    {{- include "mazarbul.backend.labels" . | nindent 4 }}
+    {{- include "ebrose.backend.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.backend.autoscaling.enabled }}
   replicas: {{ .Values.backend.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "mazarbul.backend.selectorLabels" . | nindent 6 }}
+      {{- include "ebrose.backend.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.backend.podAnnotations }}
@@ -19,20 +19,20 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "mazarbul.backend.selectorLabels" . | nindent 8 }}
+        {{- include "ebrose.backend.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "mazarbul.backend.serviceAccountName" . }}
+      serviceAccountName: {{ include "ebrose.backend.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.backend.podSecurityContext | nindent 8 }}
       containers:
         - name: backend
           securityContext:
             {{- toYaml .Values.backend.securityContext | nindent 12 }}
-          image: {{ include "mazarbul.backend.image" . }}
+          image: {{ include "ebrose.backend.image" . }}
           imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
           {{- if .Values.backend.command }}
           command:
@@ -80,7 +80,7 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: {{ include "mazarbul.fullname" . }}-backend-data
+            claimName: {{ include "ebrose.fullname" . }}-backend-data
       {{- end }}
       {{- with .Values.backend.nodeSelector }}
       nodeSelector:

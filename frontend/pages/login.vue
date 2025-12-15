@@ -41,7 +41,7 @@ const login = async () => {
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h1 class="card-title">Welcome to Mazarbul</h1>
+      <h1 class="card-title">Welcome to Ebrose</h1>
       <p class="card-sub">Please sign in to continue</p>
       
       <form @submit.prevent="login" class="login-form">

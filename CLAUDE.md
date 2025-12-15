@@ -1,4 +1,4 @@
-# Mazarbul Development Setup
+# Ebrose Development Setup
 
 ## Virtual Environment Setup
 
@@ -15,7 +15,7 @@ source /home/mikoy/venv/bin/activate
 
 ### Install Backend Dependencies
 ```bash
-cd "/mnt/c/Users/micha/OneDrive - StarHub Ltd/LUKA/mazarbul/backend"
+cd backend
 pip install -r requirements.txt
 ```
 
@@ -25,13 +25,13 @@ pip install -r requirements.txt
 ```bash
 # Activate venv first
 source /home/mikoy/venv/bin/activate
-cd "/mnt/c/Users/micha/OneDrive - StarHub Ltd/LUKA/mazarbul/backend"
+cd backend
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 ### Frontend (Nuxt 4)
 ```bash
-cd "/mnt/c/Users/micha/OneDrive - StarHub Ltd/LUKA/mazarbul/frontend"
+cd frontend
 npm install
 npm run dev
 ```
@@ -139,47 +139,47 @@ docker-compose up --build
 ### Quick Start
 ```bash
 # Build and push images
-docker build -t your-registry/mazarbul/backend:latest ./backend
-docker build -t your-registry/mazarbul/frontend:latest ./frontend
-docker push your-registry/mazarbul/backend:latest
-docker push your-registry/mazarbul/frontend:latest
+docker build -t your-registry/ebrose/backend:latest ./backend
+docker build -t your-registry/ebrose/frontend:latest ./frontend
+docker push your-registry/ebrose/backend:latest
+docker push your-registry/ebrose/frontend:latest
 
 # Deploy to development
 ./k8s/development-deploy.sh
 
 # Or deploy manually with Helm
-helm install mazarbul ./helm/mazarbul \
-  --namespace mazarbul-development \
+helm install ebrose ./helm/ebrose \
+  --namespace ebrose-development \
   --create-namespace \
-  -f ./helm/mazarbul/values-development.yaml
+  -f ./helm/ebrose/values-development.yaml
 ```
 
 ### Environment-Specific Deployments
 
 #### Development
 ```bash
-helm upgrade --install mazarbul-dev ./helm/mazarbul \
-  --namespace mazarbul-development \
+helm upgrade --install ebrose-dev ./helm/ebrose \
+  --namespace ebrose-development \
   --create-namespace \
-  -f ./helm/mazarbul/values-development.yaml
+  -f ./helm/ebrose/values-development.yaml
 ```
 
 #### Staging
 ```bash
-helm upgrade --install mazarbul-staging ./helm/mazarbul \
-  --namespace mazarbul-staging \
+helm upgrade --install ebrose-staging ./helm/ebrose \
+  --namespace ebrose-staging \
   --create-namespace \
-  -f ./helm/mazarbul/values-staging.yaml \
+  -f ./helm/ebrose/values-staging.yaml \
   --set backend.image.tag=staging-v1.0.0 \
   --set frontend.image.tag=staging-v1.0.0
 ```
 
 #### Production
 ```bash
-helm upgrade --install mazarbul-prod ./helm/mazarbul \
-  --namespace mazarbul-production \
+helm upgrade --install ebrose-prod ./helm/ebrose \
+  --namespace ebrose-production \
   --create-namespace \
-  -f ./helm/mazarbul/values-production.yaml \
+  -f ./helm/ebrose/values-production.yaml \
   --set backend.image.tag=prod-v1.0.0 \
   --set frontend.image.tag=prod-v1.0.0
 ```
@@ -187,12 +187,12 @@ helm upgrade --install mazarbul-prod ./helm/mazarbul \
 ### Independent Component Deployment
 ```bash
 # Deploy only backend
-helm upgrade --install mazarbul ./helm/mazarbul \
+helm upgrade --install ebrose ./helm/ebrose \
   --set backend.enabled=true \
   --set frontend.enabled=false
 
 # Deploy only frontend
-helm upgrade --install mazarbul ./helm/mazarbul \
+helm upgrade --install ebrose ./helm/ebrose \
   --set backend.enabled=false \
   --set frontend.enabled=true
 ```
@@ -235,12 +235,12 @@ Configuration is managed through Helm values files:
 ### Runtime Configuration Changes
 ```bash
 # Update configuration without full rebuild
-helm upgrade mazarbul ./helm/mazarbul \
+helm upgrade ebrose ./helm/ebrose \
   --reuse-values \
   --set backend.env.SECRET_KEY=new-secret-key
 
 # Scale replicas
-helm upgrade mazarbul ./helm/mazarbul \
+helm upgrade ebrose ./helm/ebrose \
   --reuse-values \
   --set backend.replicaCount=5 \
   --set frontend.replicaCount=3
@@ -262,10 +262,10 @@ Both components include:
 ### Scaling
 ```bash
 # Manual scaling
-kubectl scale deployment mazarbul-backend --replicas=5 -n mazarbul-production
+kubectl scale deployment ebrose-backend --replicas=5 -n ebrose-production
 
 # Enable auto-scaling (HPA)
-helm upgrade mazarbul ./helm/mazarbul \
+helm upgrade ebrose ./helm/ebrose \
   --set backend.autoscaling.enabled=true \
   --set backend.autoscaling.minReplicas=2 \
   --set backend.autoscaling.maxReplicas=10
