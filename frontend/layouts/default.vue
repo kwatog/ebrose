@@ -34,7 +34,12 @@ const isAdminOrManager = computed(() => {
           <NuxtLink to="/budget-items">Budget Items</NuxtLink>
           <NuxtLink to="/business-cases">Business Cases</NuxtLink>
           <NuxtLink to="/line-items">Line Items</NuxtLink>
+          <NuxtLink to="/wbs">WBS</NuxtLink>
+          <NuxtLink to="/assets">Assets</NuxtLink>
           <NuxtLink to="/purchase-orders">Purchase Orders</NuxtLink>
+          <NuxtLink to="/goods-receipts">Goods Receipts</NuxtLink>
+          <NuxtLink to="/resources">Resources</NuxtLink>
+          <NuxtLink to="/allocations">Allocations</NuxtLink>
 
           <template v-if="isAdminOrManager">
             <NuxtLink to="/admin/groups">Groups</NuxtLink>
