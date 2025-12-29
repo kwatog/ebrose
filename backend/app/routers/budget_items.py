@@ -79,6 +79,7 @@ def create_budget_item(
     )
 
     db.add(db_budget_item)
+    db.flush()  # Flush to generate ID before audit log creation
 
     # Add audit log
     audit_entry = models.AuditLog(

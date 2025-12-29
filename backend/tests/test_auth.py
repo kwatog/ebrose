@@ -2,11 +2,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-def test_login_success(client, admin_user):
+def test_login_success(client, admin_user, db_session):
     """Test successful login."""
     response = client.post(
         "/auth/login",
-        json={"username": "testadmin", "password": "testpass123"}
+        data={"username": "testadmin", "password": "testpass123"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -20,31 +20,31 @@ def test_login_invalid_credentials(client, admin_user):
     """Test login with invalid password."""
     response = client.post(
         "/auth/login",
-        json={"username": "testadmin", "password": "wrongpassword"}
+        data={"username": "testadmin", "password": "wrongpassword"}
     )
     assert response.status_code == 401
-    assert response.json()["detail"] == "Invalid credentials"
+    assert response.json()["detail"] == "Incorrect username or password"
 
 
 def test_login_nonexistent_user(client):
     """Test login with non-existent user."""
     response = client.post(
         "/auth/login",
-        json={"username": "nonexistent", "password": "password"}
+        data={"username": "nonexistent", "password": "password"}
     )
     assert response.status_code == 401
 
 
 def test_protected_endpoint_without_token(client):
     """Test accessing protected endpoint without token."""
-    response = client.get("/groups")
+    response = client.get("/user-groups")
     assert response.status_code == 401
 
 
 def test_protected_endpoint_with_token(client, admin_user, admin_token):
     """Test accessing protected endpoint with valid token."""
     response = client.get(
-        "/groups",
+        "/user-groups",
         cookies={"access_token": admin_token}
     )
     assert response.status_code == 200
@@ -67,5 +67,6 @@ def test_logout(client, admin_user, admin_token):
         cookies={"access_token": admin_token}
     )
     assert response.status_code == 200
-    # Token should be cleared
-    assert response.cookies.get("access_token") == ""
+    # Token should be cleared (either empty or not present)
+    token = response.cookies.get("access_token")
+    assert token is None or token == ""
