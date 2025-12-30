@@ -459,20 +459,69 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
    - `model_dump_json` is v2-only
    - Locations: `backend/app/routers/auth.py:76`, `backend/requirements.txt`
 
-### Open Questions
+### Design Decisions (Answered)
 
-- Should owner-group membership grant default Read/Write access for all access-scoped records (and be enforced in list endpoints), or do you want explicit RecordAccess grants to be mandatory?
-- Do you want BusinessCase visibility strictly derived from line-item access (per spec), or should direct record access/creator access also be allowed?
+**Q1: Should owner-group membership grant default Read/Write access for all access-scoped records?**
+- ✅ **Answer: YES** - Owner-group membership grants default Read/Write access
+- Implementation: `check_record_access` must verify user is member of record's `owner_group_id`
+- List endpoints must filter to only show records where user is in the owner group (or has explicit RecordAccess grant)
+
+**Q2: BusinessCase visibility - strictly line-item access or allow creator/direct access?**
+- ✅ **Answer: HYBRID APPROACH** - Line-item access (primary) + Creator access (fallback) + Explicit RecordAccess (override)
+- **Access Paths (in priority order):**
+  1. **Creator Access**: Business case creator always has Read access (Write access for Draft status only)
+  2. **Line-Item Based Access (PRIMARY)**: Users access BC through line items linked to budget items their group owns
+  3. **Explicit RecordAccess (OVERRIDE)**: Admins/Managers can grant direct access for audits, cross-functional reviews
+- **Business Rules:**
+  - Draft BC: Creator has full access, no line items required
+  - Submitted BC: Must have ≥1 line item to transition from Draft
+  - Approved BC: Access via line-item budget ownership OR explicit RecordAccess grant
+  - Creator retains Read-only after submission (for reference/history)
+  - List endpoint shows BCs accessible via any of the three paths above
+
+**Implementation Pattern:**
+```python
+def check_business_case_access(user, business_case, required_level):
+    # 1. Creator access (fallback)
+    if business_case.created_by == user.id:
+        return True if required_level == "Read" else business_case.status == "Draft"
+
+    # 2. Line-item based access (PRIMARY - per spec)
+    for line_item in business_case.line_items:
+        budget_item = line_item.budget_item
+        if user_in_owner_group(user, budget_item.owner_group_id, required_level):
+            return True
+        if check_explicit_record_access(user, budget_item, required_level):
+            return True
+
+    # 3. Explicit BC access (OVERRIDE)
+    if check_explicit_record_access(user, business_case, required_level):
+        return True
+
+    return False
+```
 
 ### Recommendations
 
-1. **Access Control:** Enforce owner-group + membership access in `check_record_access` and filter list endpoints accordingly; apply the BusinessCase "read via line items" rule explicitly
+1. **Access Control (CRITICAL):**
+   - Implement owner-group membership checks in `check_record_access` (verify user is member of `owner_group_id`)
+   - Filter all list endpoints to only return records user can access (owner-group OR explicit RecordAccess)
+   - Implement hybrid BusinessCase access: creator (fallback) + line-item based (primary) + explicit grants (override)
+   - Add validation: BC status transition from Draft requires ≥1 line item
+   - Creator retains Read-only access after submission
 2. **Alerts:** Fix chaining to use `wbs.line_item.business_case` (or add relationship) and scope alerts to accessible records
-3. **Audit Logging:** Replace decorator with one that preloads old values and handles record_id for CREATE (or standardize on per-router audit logging)
-4. **Missing Endpoints:** Add BusinessCase PUT and align implementation-plan claims with actual code
+3. **Audit Logging:** Replace decorator with one that preloads old values and handles record_id for CREATE (or standardize on per-router audit logging like budget_items pattern)
+4. **Missing Endpoints:** Add BusinessCase PUT endpoint and align implementation-plan claims with actual code
 5. **Schema Design:** Make child create schemas omit/ignore owner_group_id so API matches inheritance behavior; validate user can write to parent before creating
-6. **Dependencies:** Pin FastAPI/Pydantic versions and implement Decimal + rounding at API boundary for money fields
-7. **Testing:** Add tests for access scoping by owner_group, BusinessCase visibility via line items, audit logging for decorator routes, and alert generation
+6. **Dependencies:** Pin FastAPI/Pydantic versions to avoid v1/v2 API conflicts; implement Decimal + 2dp rounding at API boundary for currency fields
+7. **Database Constraints:** Make required foreign keys NOT NULL (Asset.wbs_id, PurchaseOrder.asset_id, GoodsReceipt.po_id)
+8. **Security:** Remove SECRET_KEY fallback; require environment variable for production deployments
+9. **Testing:** Add comprehensive tests for:
+   - Owner-group membership access control
+   - BusinessCase visibility via all three paths (creator, line-item, explicit)
+   - Audit logging for decorator-based routes
+   - Alert generation with proper access scoping
+   - BC status transitions requiring line items
 
 ---
 
