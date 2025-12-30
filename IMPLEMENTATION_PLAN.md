@@ -410,6 +410,72 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
 
 ---
 
+## 🔍 Code Review Findings (Dec 30, 2025)
+
+### Critical Issues
+
+1. **Access scoping from owner_group_id not enforced**
+   - List/read/update/create endpoints allow any authenticated user to act on records
+   - `check_record_access` never checks `owner_group_id` membership (contrary to requirements)
+   - Locations: `backend/app/auth.py:160`, `backend/app/routers/budget_items.py:21`, `backend/app/routers/business_case_line_items.py:35`, `backend/app/routers/wbs.py:11`
+
+### High Priority Issues
+
+2. **BusinessCase update endpoint missing**
+   - Implementation plan claims all entities have UPDATE, but BusinessCase PUT is missing
+   - Location: `backend/app/routers/business_cases.py:1`
+
+3. **Alerts will raise AttributeError**
+   - WBS has no `business_case` relationship
+   - `po.asset.wbs.business_case` is invalid chain
+   - Location: `backend/app/routers/alerts.py:71`
+
+4. **Incomplete audit logging for decorator-based routers**
+   - `old_values` never captured for UPDATE/DELETE logs
+   - BusinessCaseLineItem CREATE logs `record_id=None` (no flush before audit insert)
+   - Locations: `backend/app/auth.py:204`, `backend/app/routers/business_case_line_items.py:89`
+
+### Medium Priority Issues
+
+5. **Required foreign keys are nullable**
+   - Asset.wbs_id, PurchaseOrder.asset_id, GoodsReceipt.po_id allow broken chains
+   - Requirements assume mandatory relationships
+   - Locations: `backend/app/models.py:167`, `backend/app/models.py:188`, `backend/app/models.py:215`
+
+6. **Money handling doesn't follow spec**
+   - No Decimal type with 2dp rounding on write
+   - All currency fields are plain floats
+   - Location: `backend/app/schemas.py:135`
+
+7. **SECRET_KEY has insecure fallback**
+   - Falls back to static dev key if env is missing
+   - Undermines "environment-driven secrets" requirement
+   - Location: `backend/app/auth.py:13`
+
+### Low Priority Issues
+
+8. **Mixed Pydantic v1/v2 APIs**
+   - Unpinned deps can break auth cookie serialization
+   - `model_dump_json` is v2-only
+   - Locations: `backend/app/routers/auth.py:76`, `backend/requirements.txt`
+
+### Open Questions
+
+- Should owner-group membership grant default Read/Write access for all access-scoped records (and be enforced in list endpoints), or do you want explicit RecordAccess grants to be mandatory?
+- Do you want BusinessCase visibility strictly derived from line-item access (per spec), or should direct record access/creator access also be allowed?
+
+### Recommendations
+
+1. **Access Control:** Enforce owner-group + membership access in `check_record_access` and filter list endpoints accordingly; apply the BusinessCase "read via line items" rule explicitly
+2. **Alerts:** Fix chaining to use `wbs.line_item.business_case` (or add relationship) and scope alerts to accessible records
+3. **Audit Logging:** Replace decorator with one that preloads old values and handles record_id for CREATE (or standardize on per-router audit logging)
+4. **Missing Endpoints:** Add BusinessCase PUT and align implementation-plan claims with actual code
+5. **Schema Design:** Make child create schemas omit/ignore owner_group_id so API matches inheritance behavior; validate user can write to parent before creating
+6. **Dependencies:** Pin FastAPI/Pydantic versions and implement Decimal + rounding at API boundary for money fields
+7. **Testing:** Add tests for access scoping by owner_group, BusinessCase visibility via line items, audit logging for decorator routes, and alert generation
+
+---
+
 ## 📋 Implementation Notes
 
 ### Key Achievements
