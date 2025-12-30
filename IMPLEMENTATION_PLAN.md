@@ -41,6 +41,20 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
 **Files modified:**
 - `backend/app/main.py` - Secure startup admin creation
 
+### 🔄 5. Owner-Group Access Scoping
+**Status:** 🔄 PENDING
+**Owner:** TBD
+**Target:** TBD
+**Description:** Enforce owner_group access on list/read/write and BusinessCase visibility via line items.
+**Impact:** Prevents unauthorized access to access-scoped records.
+
+### 🔄 6. Secrets Enforcement & Dependency Pinning
+**Status:** 🔄 PENDING
+**Owner:** TBD
+**Target:** TBD
+**Description:** Require non-dev SECRET_KEY at startup and pin FastAPI/Pydantic versions to avoid v1/v2 mismatches.
+**Impact:** Eliminates insecure defaults and runtime incompatibilities.
+
 ---
 
 ## 🟡 High Impact (Core Functionality)
@@ -111,6 +125,30 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
 - ✅ Creates 3 groups (Finance/Operations/IT)
 **Files created:**
 - `backend/reset_and_seed.py` - Executable reset script
+
+### 🔄 10. Alerts Chain & Access Scope
+**Status:** 🔄 PENDING
+**Owner:** TBD
+**Target:** TBD
+**Description:** Fix WBS → line item → BusinessCase chain and restrict alerts to accessible records.
+
+### 🔄 11. Audit Logging Consistency
+**Status:** 🔄 PENDING
+**Owner:** TBD
+**Target:** TBD
+**Description:** Ensure CREATE logs have record_id and UPDATE/DELETE capture old_values across routers/decorators.
+
+### 🔄 12. BusinessCase UPDATE Endpoint
+**Status:** 🔄 PENDING
+**Owner:** TBD
+**Target:** TBD
+**Description:** Add missing BusinessCase UPDATE endpoint and align plan claims with implementation.
+
+### 🔄 13. Currency Decimal Rounding
+**Status:** 🔄 PENDING
+**Owner:** TBD
+**Target:** TBD
+**Description:** Implement Decimal rounding to 2dp at the API boundary for money fields.
 
 ---
 
@@ -243,30 +281,43 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
 - `backend/alembic.ini`
 
 ### ✅ 18. Testing Framework
-**Status:** ✅ COMPLETED (Dec 29, 2025)
+**Status:** ✅ COMPLETED (Dec 30, 2025)
 **Priority:** Medium (for production)
 **Description:** Comprehensive testing framework with backend and frontend coverage
-- ✅ Frontend: Vitest + Playwright configured
+- ✅ Frontend: Vitest + Playwright configured (requires npm install to run)
 - ✅ Frontend: 1 Vitest unit test (useApiFetch with token refresh)
 - ✅ Frontend: 3 Playwright E2E test suites (login, budget workflow, CRUD operations)
-- ✅ Backend: Complete pytest testing structure
-- ✅ Backend: 3 comprehensive test suites covering 25+ test cases
+- ✅ Backend: Complete pytest testing structure with virtual environment
+- ✅ Backend: 3 comprehensive test suites with **18 tests passing**
 - ✅ API contract tests for CRUD operations
 - ✅ Access control and permission testing
 - ✅ Audit logging verification tests
+- ✅ Database isolation with test-specific SQLite database
+**Test Results (Backend):**
+- ✅ 18 tests passing
+- ⏭️ 2 tests skipped (known decorator issue with async audit_log_change)
 **Test Coverage:**
-- Authentication (login, token refresh, logout, protected endpoints)
-- Budget Items CRUD (create, read, update, delete, pagination, duplicates)
-- Access Control (role-based, owner group inheritance, audit logs)
-- Frontend workflows (login flow, budget creation, entity navigation)
+- Authentication: 7 tests (login success/failure, protected endpoints, token refresh, logout)
+- Budget Items CRUD: 7 tests (create, duplicate validation, list/pagination, update, delete, audit logs)
+- Access Control: 4 tests (admin permissions, user restrictions, record ownership, audit logging)
+- Frontend workflows: Login flow, budget creation, entity navigation (requires npm install)
+**Key Implementation Details:**
+- Virtual environment setup at `backend/venv` with all dependencies
+- Test database isolation using dependency overrides for all get_db functions
+- Pre-generated password hashes for consistent test execution
+- Comprehensive fixtures: admin_user, manager_user, regular_user, test_group, auth tokens
 **Files created:**
 - `backend/tests/__init__.py`
-- `backend/tests/conftest.py` - Test fixtures and database setup
-- `backend/tests/test_auth.py` - 8 authentication tests
-- `backend/tests/test_budget_items.py` - 7 CRUD + pagination tests
-- `backend/tests/test_access_control.py` - 8 permission + audit tests
+- `backend/tests/conftest.py` - Test fixtures, database setup, dependency overrides
+- `backend/tests/test_auth.py` - 7 authentication tests (all passing)
+- `backend/tests/test_budget_items.py` - 7 CRUD tests (all passing)
+- `backend/tests/test_access_control.py` - 4 active + 2 skipped tests
 - `frontend/tests/e2e/budget-workflow.spec.ts` - Workflow tests
 - `frontend/tests/e2e/crud-operations.spec.ts` - CRUD operation tests
+**Known Limitations:**
+- Resources and WBS endpoints use `@audit_log_change` decorator with args/kwargs injection issues
+- Manual audit logging pattern (used in budget_items) is the recommended approach
+- Frontend tests require `npm install` in frontend directory before execution
 
 ---
 
@@ -321,15 +372,15 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
 
 ## 🎯 Current Focus
 
-**COMPLETED TODAY (Dec 29, 2025):**
-### Morning Session:
+**COMPLETED Dec 29-30, 2025:**
+### Dec 29 (Morning Session):
 1. ✅ BudgetItem & BusinessCaseLineItem entities
 2. ✅ UPDATE endpoints for 5 entities
 3. ✅ Owner group inheritance logic
 4. ✅ Database reset & seed script
 5. ✅ 3 Priority 1 frontend pages with full CRUD
 
-### Afternoon Session:
+### Dec 29 (Afternoon Session):
 6. ✅ 3 Priority 2 frontend pages (WBS, Assets, Enhanced POs)
 7. ✅ 3 Priority 3 frontend pages (GRs, Resources, Allocations)
 8. ✅ Updated navigation with all 10 entity pages
@@ -337,11 +388,25 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
 10. ✅ Comprehensive testing framework (pytest + Playwright)
 11. ✅ **100% MVP COMPLETION** - All 14 entities fully functional in UI
 
+### Dec 30 (Testing Session):
+12. ✅ Fixed pytest authentication and database isolation issues
+13. ✅ Created virtual environment for backend tests
+14. ✅ Fixed dependency overrides for all get_db functions
+15. ✅ Fixed user fixtures with required fields
+16. ✅ Fixed audit logging record_id generation with db.flush()
+17. ✅ **18 backend tests passing** (auth, budget_items, access_control)
+
 **NEXT STEPS:**
 1. Alembic migrations setup (for production deployments)
 2. DateTime handling improvements (convert string to DateTime)
-3. Additional database constraints and indexes
+3. Additional database constraints and indexes (include non-null chain FKs)
 4. SQLAlchemy 2.x API migration completion
+5. Fix @audit_log_change decorator (args/kwargs injection issue)
+6. Enforce owner-group access scoping and BusinessCase visibility via line items
+7. Fix alerts chain (WBS -> line item -> BusinessCase) and scope alerts to accessible records
+8. Add missing BusinessCase UPDATE endpoint and align plan vs implementation
+9. Require non-dev SECRET_KEY; pin FastAPI/Pydantic versions to avoid v1/v2 mismatch
+10. Implement Decimal rounding at API boundary for currency fields
 
 ---
 
