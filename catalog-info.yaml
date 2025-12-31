@@ -2,17 +2,96 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: ebrose
-  title: Ebrose
-  description: Procurement + budget tracking (FastAPI + Nuxt) with audit logging and access control.
+  title: Ebrose - Procurement Tracking System
+  description: Enterprise procurement and budget tracking system with complete audit trail, role-based access control, and owner-group inheritance.
   tags:
     - fastapi
     - nuxt
+    - vue
     - sqlite
+    - postgresql
     - procurement
+    - budget-management
+    - jwt-auth
+    - access-control
+    - audit-logging
+  links:
+    - title: GitHub Repository
+      url: https://github.com/kwatog/ebrose
+    - title: API Documentation
+      url: http://localhost:8000/docs
+    - title: Health Check
+      url: http://localhost:8000/health
   annotations:
     backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: kwatog/ebrose
+    backstage.io/linguist-generated: "true"
+    pagerduty.com/integration-key: ""
+    backstage.io/kubernetes-deployment-name: ebrose-backend
+    backstage.io/kubernetes-replicas-name: ebrose-backend
 spec:
   type: service
-  lifecycle: experimental
+  lifecycle: production
   owner: group:digital-apps
-  providesApis: []
+  system: procurement-system
+  providesApis:
+    - ebrose-api
+  dependsOn:
+    - component:postgres-cluster
+    - component:redis-cache
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: ebrose-api
+  title: Ebrose REST API
+  description: RESTful API for procurement tracking with CRUD operations on all entities, JWT authentication, and comprehensive access control.
+  tags:
+    - openapi
+    - fastapi
+    - rest
+  links:
+    - title: OpenAPI Spec
+      url: http://localhost:8000/docs
+spec:
+  type: openapi
+  lifecycle: production
+  owner: group:digital-apps
+  system: procurement-system
+  definition:
+    $text: ./docs/openapi.yaml
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: ebrose-database
+  title: Ebrose PostgreSQL Database
+  description: Primary database for storing all procurement and budget data.
+  tags:
+    - postgresql
+    - database
+    - sql
+spec:
+  type: database
+  lifecycle: production
+  owner: group:platform-ops
+  system: procurement-system
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: ebrose-cache
+  title: Ebrose Redis Cache
+  description: Session storage and caching layer for improved performance.
+  tags:
+    - redis
+    - cache
+    - key-value
+spec:
+  type: cache
+  lifecycle: production
+  owner: group:platform-ops
+  system: procurement-system
