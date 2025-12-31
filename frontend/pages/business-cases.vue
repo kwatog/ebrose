@@ -115,8 +115,6 @@ const openEditModal = (bc: BusinessCase) => {
   }
   showEditModal.value = true
 }
-  showEditModal.value = true
-}
 
 const closeModals = () => {
   showCreateModal.value = false

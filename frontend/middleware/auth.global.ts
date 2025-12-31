@@ -1,14 +1,19 @@
 export default defineNuxtRouteMiddleware(async (to) => {
-  // With HttpOnly cookies, JS can't read the access token.
-  // Use the non-HttpOnly user_info cookie for client route guarding.
-  const userInfo = useCookie('user_info')
+  const userInfoCookie = useCookie('user_info')
 
-  // Public routes (no auth required)
+  let userInfo = null
+  if (userInfoCookie.value) {
+    try {
+      userInfo = JSON.parse(atob(userInfoCookie.value))
+    } catch {
+      userInfo = null
+    }
+  }
+
   const publicPaths = new Set(['/login', '/health'])
   if (publicPaths.has(to.path)) return
 
-  // If user not present, try to refresh silently
-  if (!userInfo.value) {
+  if (!userInfo) {
     const config = useRuntimeConfig()
     const apiBase = (config as any).apiBase || config.public.apiBase
     try {
@@ -17,12 +22,21 @@ export default defineNuxtRouteMiddleware(async (to) => {
         credentials: 'include'
       })
     } catch {
-      // ignore refresh failures here
     }
   }
 
-  // Still unauthenticated? Redirect to login
-  if (!userInfo.value) {
+  if (!userInfo) {
+    const refreshedCookie = useCookie('user_info')
+    if (refreshedCookie.value) {
+      try {
+        userInfo = JSON.parse(atob(refreshedCookie.value))
+      } catch {
+        userInfo = null
+      }
+    }
+  }
+
+  if (!userInfo) {
     return navigateTo('/login')
   }
 })

@@ -1,3 +1,5 @@
+import json
+import base64
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -65,7 +67,7 @@ def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), 
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60  # Convert to seconds
     )
     
-    # Set user info cookie (not HttpOnly for frontend access)
+    # Set user info cookie (not HttpOnly for frontend access) - use base64 to avoid escaping issues
     user_info = {
         "id": user.id,
         "username": user.username,
@@ -73,9 +75,10 @@ def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), 
         "role": user.role,
         "department": user.department
     }
+    user_info_b64 = base64.b64encode(json.dumps(user_info).encode()).decode()
     response.set_cookie(
         key="user_info",
-        value=schemas.UserInfo(**user_info).model_dump_json(),
+        value=user_info_b64,
         secure=False,  # Set to True in production with HTTPS
         samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
@@ -123,6 +126,7 @@ def refresh_token(request: Request, response: Response, db: Session = Depends(ge
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     
+    # Update user info cookie - use base64 to avoid escaping issues
     user_info = {
         "id": user.id,
         "username": user.username,
@@ -130,9 +134,10 @@ def refresh_token(request: Request, response: Response, db: Session = Depends(ge
         "role": user.role,
         "department": user.department
     }
+    user_info_b64 = base64.b64encode(json.dumps(user_info).encode()).decode()
     response.set_cookie(
         key="user_info",
-        value=schemas.UserInfo(**user_info).model_dump_json(),
+        value=user_info_b64,
         secure=False,  # Set to True in production with HTTPS
         samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60

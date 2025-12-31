@@ -24,10 +24,19 @@ const login = async () => {
       })
     })
     
-    // Backend sets HttpOnly access_token and user_info cookies.
-    // As a precaution, also write user_info to keep UI in sync quickly.
+    // Backend sets HttpOnly access_token and base64-encoded user_info cookie.
+    // Decode and store user_info for UI state.
     const userCookie = useCookie('user_info')
-    userCookie.value = JSON.stringify(response.user)
+    if (userCookie.value) {
+      try {
+        const decoded = JSON.parse(atob(userCookie.value))
+        userCookie.value = decoded
+      } catch {
+        userCookie.value = response.user
+      }
+    } else {
+      userCookie.value = response.user
+    }
     
     await navigateTo('/')
   } catch (e: any) {

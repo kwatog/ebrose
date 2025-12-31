@@ -40,7 +40,7 @@ $CONTAINER_CMD run --rm \
   -v "$FRONTEND_DIR:/work:z" \
   -w /work \
   --ipc=host \
-  mcr.microsoft.com/playwright:v1.55.0-jammy \
+  mcr.microsoft.com/playwright:v1.57.0-jammy \
   /bin/bash -c "
     set -e
     echo '📦 Installing dependencies...'
