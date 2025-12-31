@@ -105,7 +105,7 @@ class BusinessCase(Base):
     requestor = Column(String(255))
     dept = Column(String(255))
     lead_group_id = Column(Integer, ForeignKey("user_group.id"))
-    estimated_cost = Column(Float)
+    estimated_cost = Column(Numeric(10, 2))
     status = Column(String(50))
 
     # Audit

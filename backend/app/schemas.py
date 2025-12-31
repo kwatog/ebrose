@@ -182,8 +182,17 @@ class BusinessCaseBase(BaseModel):
     requestor: Optional[str] = None
     dept: Optional[str] = None
     lead_group_id: Optional[int] = None
-    estimated_cost: Optional[float] = None
+    estimated_cost: Optional[Decimal] = None
     status: Optional[str] = "Draft"
+
+    @field_validator('estimated_cost', mode='before')
+    @classmethod
+    def round_estimated_cost(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class BusinessCaseCreate(BusinessCaseBase):
     pass
@@ -194,8 +203,17 @@ class BusinessCaseUpdate(BaseModel):
     requestor: Optional[str] = None
     dept: Optional[str] = None
     lead_group_id: Optional[int] = None
-    estimated_cost: Optional[float] = None
+    estimated_cost: Optional[Decimal] = None
     status: Optional[str] = None
+
+    @field_validator('estimated_cost', mode='before')
+    @classmethod
+    def round_estimated_cost(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class BusinessCase(BusinessCaseBase, AuditMixin):
     id: int

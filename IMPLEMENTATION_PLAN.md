@@ -160,11 +160,26 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
 **Target:** TBD
 **Description:** Add missing BusinessCase UPDATE endpoint and align plan claims with implementation.
 
-### 🔄 13. Currency Decimal Rounding
-**Status:** 🔄 PENDING
-**Owner:** TBD
-**Target:** TBD
-**Description:** Implement Decimal rounding to 2dp at the API boundary for money fields.
+### 🔴 13. Frontend Decimal Precision Loss (CRITICAL)
+**Status:** 🔄 IN PROGRESS (Dec 31, 2025)
+**Priority:** CRITICAL - Data Integrity Risk
+**Description:** Frontend uses JavaScript `number` type for monetary values, causing precision loss
+
+**Completed Fixes:**
+- ✅ Backend: Changed `BusinessCase.estimated_cost` from `Float` to `Numeric(10, 2)`
+- ✅ Backend: Updated `BusinessCase` schema with `Decimal` type and 2dp rounding validator
+- ✅ Frontend: Updated `business-cases.vue` to use string-based handling
+
+**Remaining Work:**
+- Update 6 other frontend pages (budget-items, line-items, purchase-orders, goods-receipts, resources, allocations)
+
+**Files to Fix:**
+- `frontend/pages/budget-items.vue` - BudgetItem interface and form
+- `frontend/pages/line-items.vue` - BusinessCaseLineItem interface
+- `frontend/pages/purchase-orders.vue` - PurchaseOrder interface
+- `frontend/pages/goods-receipts.vue` - GoodsReceipt interface
+- `frontend/pages/resources.vue` - Resource interface
+- `frontend/pages/allocations.vue` - ResourcePOAllocation interface
 
 ---
 
@@ -424,14 +439,18 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
 17. ✅ **18 backend tests passing** (auth, budget_items, access_control)
 
 **NEXT STEPS:**
-1. Alembic migrations setup (for production deployments)
-2. DateTime handling improvements (convert string to DateTime)
-3. Additional database constraints and indexes (include non-null chain FKs)
-4. SQLAlchemy 2.x API migration completion
-5. Fix @audit_log_change decorator (args/kwargs injection issue)
-6. Scope alerts to accessible records (relationship added, need to update alerts.py)
-7. Require non-dev SECRET_KEY; pin FastAPI/Pydantic versions to avoid v1/v2 mismatch
-8. Implement Decimal rounding at API boundary for currency fields
+1. 🔴 **Fix frontend decimal precision loss** (CRITICAL - data integrity risk)
+   - Convert all monetary TypeScript interfaces from `number` to `string`
+   - Update form handling to preserve exact decimal values
+   - Fix `BusinessCase.estimated_cost` from `Float` to `Numeric(10, 2)`
+   - Run existing decimal-money.spec.ts tests to validate
+2. Pin FastAPI/Pydantic versions to avoid v1/v2 mismatch
+3. Alembic migrations setup (for production deployments)
+4. DateTime handling improvements (convert string to DateTime)
+5. Additional database constraints and indexes
+6. SQLAlchemy 2.x API migration completion
+7. Fix @audit_log_change decorator (args/kwargs injection issue)
+8. Scope alerts to accessible records (relationship added, need to update alerts.py)
 
 ---
 
@@ -487,6 +506,15 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
    - Unpinned deps can break auth cookie serialization
    - `model_dump_json` is v2-only
    - Locations: `backend/app/routers/auth.py:76`, `backend/requirements.txt`
+
+9. **Frontend Decimal Precision Loss** 🔴 PARTIALLY RESOLVED
+    - ✅ Backend FIXED: `BusinessCase.estimated_cost` changed from `Float` to `Numeric(10, 2)`
+    - ✅ Backend FIXED: `BusinessCase` schema uses `Decimal` with 2dp rounding validator
+    - 🔄 Frontend IN PROGRESS: business-cases.vue updated to use string-based handling
+    - ⏳ Remaining: 6 other frontend pages (budget-items, line-items, purchase-orders, goods-receipts, resources, allocations)
+    - Risk of financial discrepancies and rounding errors
+    - Recommendation: Use string-based decimal handling in all frontend forms
+    - Locations: All 7 frontend Vue pages with monetary fields, `backend/app/models.py:108`
 
 ### Design Decisions (Answered)
 

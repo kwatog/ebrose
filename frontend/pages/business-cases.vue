@@ -12,7 +12,7 @@ interface BusinessCase {
   requestor?: string
   dept?: string
   lead_group_id?: number
-  estimated_cost?: number
+  estimated_cost?: string  // Changed from number to string for Decimal precision
   status?: string
   created_by?: number
   updated_by?: number
@@ -47,7 +47,7 @@ const form = ref({
   requestor: '',
   dept: '',
   lead_group_id: null as number | null,
-  estimated_cost: 0,
+  estimated_cost: '',  // Changed from 0 to '' for string-based handling
   status: 'Draft'
 })
 
@@ -106,14 +106,15 @@ const openCreateModal = () => {
 const openEditModal = (bc: BusinessCase) => {
   selectedCase.value = bc
   form.value = {
-    title: bc.title,
-    description: bc.description || '',
+    title: bc.title || '',
     requestor: bc.requestor || '',
     dept: bc.dept || '',
     lead_group_id: bc.lead_group_id || null,
-    estimated_cost: bc.estimated_cost || 0,
+    estimated_cost: bc.estimated_cost ? String(bc.estimated_cost) : '',
     status: bc.status || 'Draft'
   }
+  showEditModal.value = true
+}
   showEditModal.value = true
 }
 
@@ -263,7 +264,7 @@ onMounted(async () => {
           </td>
           <td>
             <span v-if="bc.estimated_cost" class="amount">
-              ${{ bc.estimated_cost.toLocaleString() }}
+              ${{ parseFloat(bc.estimated_cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
             </span>
             <span v-else class="text-muted">-</span>
           </td>
@@ -359,8 +360,8 @@ onMounted(async () => {
             <div class="form-group">
               <label>Estimated Cost (USD)</label>
               <input
-                v-model.number="form.estimated_cost"
-                type="number"
+                v-model="form.estimated_cost"
+                type="text"
                 step="0.01"
                 min="0"
                 placeholder="0.00"
