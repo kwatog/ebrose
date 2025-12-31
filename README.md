@@ -10,6 +10,8 @@ This is a fully vibe-coded project built with AI assistance from:
 - OpenAI Codex (GPT-5.2)
 - Google Gemini 3 Pro
 - Anthropic Claude Sonnet
+- Minimax M2.1
+- OpenCode
 
 Human review is still recommended for security, compliance, and production hardening.
 
