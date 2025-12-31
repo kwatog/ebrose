@@ -65,12 +65,22 @@ npm run dev
 
 ### Frontend E2E Tests
 ```bash
-cd frontend
-npm install
-npm run test:e2e
-# Or with Playwright
-npm run test:e2e:playwright
+# Playwright E2E tests MUST run inside Docker container
+# This ensures consistent browser environment and dependencies
+
+cd /Users/mmmiciano/ISEngineering/ebrose
+
+# Start Playwright test environment
+docker-compose -f docker-compose.playwright.yml up --build
+
+# Or run tests directly with the pre-built test container
+docker-compose -f docker-compose.playwright.yml run playwright-test
+
+# View test report after execution
+open PLAYWRIGHT_TEST_REPORT.html
 ```
+
+**Note:** E2E tests require Docker and cannot run directly with `npm run test:e2e` due to native browser dependencies. Use the Docker Compose setup for consistent testing.
 
 ## Authentication
 - Default Admin: `admin` / password set via `ADMIN_PASSWORD` env var (required in production)
