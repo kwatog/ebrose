@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, Boolean
-from sqlalchemy.orm import relationship
+from decimal import Decimal
+
+from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, Boolean, Numeric
+from sqlalchemy.orm import relationship, column_property
 from .database import Base
 
 
@@ -80,7 +82,7 @@ class BudgetItem(Base):
     workday_ref = Column(String(255), unique=True, nullable=False, index=True)
     title = Column(Text, nullable=False)
     description = Column(Text)
-    budget_amount = Column(Float, nullable=False)
+    budget_amount = Column(Numeric(10, 2), nullable=False)
     currency = Column(String(10), nullable=False)
     fiscal_year = Column(Integer, nullable=False)
     owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
@@ -125,7 +127,7 @@ class BusinessCaseLineItem(Base):
     title = Column(Text, nullable=False)
     description = Column(Text)
     spend_category = Column(String(20), nullable=False)  # CAPEX, OPEX
-    requested_amount = Column(Float, nullable=False)
+    requested_amount = Column(Numeric(10, 2), nullable=False)
     currency = Column(String(10), nullable=False)
     planned_commit_date = Column(String(32))
     status = Column(String(50))
@@ -159,13 +161,19 @@ class WBS(Base):
 
     line_item = relationship("BusinessCaseLineItem", back_populates="wbs_items")
     assets = relationship("Asset", back_populates="wbs")
+    business_case = relationship("BusinessCase",
+        primaryjoin="WBS.business_case_line_item_id == BusinessCaseLineItem.id",
+        secondaryjoin="BusinessCaseLineItem.business_case_id == BusinessCase.id",
+        secondary="business_case_line_item",
+        viewonly=True,
+        uselist=False)
 
 
 class Asset(Base):
     __tablename__ = "asset"
 
     id = Column(Integer, primary_key=True, index=True)
-    wbs_id = Column(Integer, ForeignKey("wbs.id"))
+    wbs_id = Column(Integer, ForeignKey("wbs.id"), nullable=False)
     asset_code = Column(String(255), unique=True, index=True)
     asset_type = Column(String(50))
     description = Column(Text)
@@ -186,15 +194,15 @@ class PurchaseOrder(Base):
     __tablename__ = "purchase_order"
 
     id = Column(Integer, primary_key=True, index=True)
-    asset_id = Column(Integer, ForeignKey("asset.id"))
+    asset_id = Column(Integer, ForeignKey("asset.id"), nullable=False)
     po_number = Column(String(255), unique=True, index=True)
     ariba_pr_number = Column(String(255))
     supplier = Column(String(255))
     po_type = Column(String(50))
     start_date = Column(String(32))
     end_date = Column(String(32))
-    total_amount = Column(Float)
-    currency = Column(String(10))
+    total_amount = Column(Numeric(10, 2))
+    currency = Column(String(10), default="USD")
     spend_category = Column(String(20), nullable=False)  # CAPEX, OPEX
     planned_commit_date = Column(String(32))
     actual_commit_date = Column(String(32))
@@ -216,10 +224,10 @@ class GoodsReceipt(Base):
     __tablename__ = "goods_receipt"
 
     id = Column(Integer, primary_key=True, index=True)
-    po_id = Column(Integer, ForeignKey("purchase_order.id"))
+    po_id = Column(Integer, ForeignKey("purchase_order.id"), nullable=False)
     gr_number = Column(String(255), unique=True, index=True)
     gr_date = Column(String(32))
-    amount = Column(Float)
+    amount = Column(Numeric(10, 2))
     description = Column(Text)
     owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
 
@@ -241,7 +249,7 @@ class Resource(Base):
     role = Column(String(255))
     start_date = Column(String(32))
     end_date = Column(String(32))
-    cost_per_month = Column(Float)
+    cost_per_month = Column(Numeric(10, 2))
     owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
     status = Column(String(50))
 
@@ -262,7 +270,7 @@ class ResourcePOAllocation(Base):
     po_id = Column(Integer, ForeignKey("purchase_order.id"))
     allocation_start = Column(String(32))
     allocation_end = Column(String(32))
-    expected_monthly_burn = Column(Float)
+    expected_monthly_burn = Column(Numeric(10, 2))
     owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
 
     # Audit

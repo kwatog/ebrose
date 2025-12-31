@@ -4,13 +4,14 @@
 
 ### Create Virtual Environment
 ```bash
-cd /home/mikoy
+cd backend
 python3 -m venv venv
 ```
 
 ### Activate Virtual Environment
 ```bash
-source /home/mikoy/venv/bin/activate
+# From project root
+source backend/venv/bin/activate
 ```
 
 ### Install Backend Dependencies
@@ -24,9 +25,17 @@ pip install -r requirements.txt
 ### Backend (FastAPI)
 ```bash
 # Activate venv first
-source /home/mikoy/venv/bin/activate
+source backend/venv/bin/activate
 cd backend
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+python3 -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+### Running Tests
+```bash
+# Activate venv first
+source backend/venv/bin/activate
+cd backend
+python3 -m pytest tests/ -v
 ```
 
 ### Frontend (Nuxt 4)

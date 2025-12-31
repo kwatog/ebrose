@@ -10,7 +10,13 @@ from sqlalchemy.orm import Session
 from .database import SessionLocal
 from . import models
 
-SECRET_KEY = os.getenv("SECRET_KEY", "development-fallback-key-change-for-production")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    environment = os.getenv("ENVIRONMENT", "").lower()
+    if environment in ["production", "prod", "staging"]:
+        raise ValueError("SECRET_KEY environment variable is required for production deployments")
+    SECRET_KEY = "development-fallback-key-change-for-production"
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
 
@@ -178,7 +184,7 @@ def check_record_access(record_type: str, record_id_param: str, required_access:
     """
     def access_checker(
         request: Request,
-        current_user: models.User = Depends(get_current_user), 
+        current_user: models.User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
         # Extract record_id from path params
@@ -195,11 +201,11 @@ def check_record_access(record_type: str, record_id_param: str, required_access:
         # Admin has full access to everything
         if current_user.role == "Admin":
             return current_user
-            
-        # Manager has full access to everything  
+
+        # Manager has full access to everything
         if current_user.role == "Manager":
             return current_user
-            
+
         # Fetch the record to check owner_group_id and creator
         model_cls = getattr(models, record_type, None)
         record = None
@@ -249,14 +255,14 @@ def check_record_access(record_type: str, record_id_param: str, required_access:
         # Check department access for User role
         # Requires fetching the record again if not fetched
         if current_user.role == "User":
-             if not model_cls: 
+             if not model_cls:
                  model_cls = getattr(models, record_type, None)
              if model_cls:
                 record = db.query(model_cls).get(record_id)
                 if record and hasattr(record, 'dept'):
                     if record.dept == current_user.department and required_access in ["Read", "Write"]:
                         return current_user
-                
+
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Insufficient {required_access} access to {record_type} {record_id}"
@@ -266,56 +272,68 @@ def check_record_access(record_type: str, record_id_param: str, required_access:
 
 def audit_log_change(action: str, table_name: str):
     """
-    Decorator to log changes. 
+    Decorator to log changes.
     Requires the decorated function to return a SQLAlchemy model instance or a dict with 'id'.
-    Requires 'current_user' and 'db' to be in the function kwargs.
+    Requires 'current_user', 'db', and optionally 'id' or record_id in kwargs/args.
+    For CREATE: ensure db.flush() is called to generate ID before audit log.
     """
     def audit_decorator(func):
         async def wrapper(*args, **kwargs):
             current_user = kwargs.get('current_user')
             db = kwargs.get('db')
-            request = kwargs.get('request') # Try to get request if available
+            request = kwargs.get('request')
 
-            # Pre-fetch old values for Update/Delete
             old_values = None
             record_id = None
-            
-            # Need to identify record_id from args/kwargs usually
-            # This is tricky for generic usage. 
-            # We will assume the function returns the modified object.
-            
+
+            # For UPDATE/DELETE: pre-fetch old values BEFORE the operation
+            if action in ['UPDATE', 'DELETE']:
+                # Try to extract record_id from kwargs
+                record_id = kwargs.get('id') or kwargs.get(f'{table_name}_id') or kwargs.get('bc_id') or kwargs.get('wbs_id') or kwargs.get('po_id') or kwargs.get('asset_id') or kwargs.get('gr_id') or kwargs.get('resource_id') or kwargs.get('alloc_id')
+                if record_id and db:
+                    model_cls = getattr(models, table_name.title().replace('_', ''), None)
+                    if model_cls:
+                        record = db.get(model_cls, record_id)
+                        if record and hasattr(record, '__dict__'):
+                            old_values = {k: v for k, v in record.__dict__.items() if not k.startswith('_')}
+                        elif record and hasattr(record, 'model_dump'):
+                            old_values = record.model_dump()
+
             result = await func(*args, **kwargs)
-            
+
             if current_user and db:
-                # Determine record ID
+                # Determine record ID from result
                 if hasattr(result, 'id'):
                     record_id = result.id
                 elif isinstance(result, dict) and 'id' in result:
                     record_id = result['id']
-                
-                # Determine new values (simple dump)
+
+                # Ensure record_id is available for CREATE (requires db.flush() in the route)
+                if not record_id:
+                    return result
+
+                # Determine new values
                 new_vals = None
                 if action in ['CREATE', 'UPDATE']:
                     if hasattr(result, 'model_dump'):
                         new_vals = result.model_dump()
                     elif hasattr(result, '__dict__'):
-                         # SQLAlchemy object
-                         new_vals = {k:v for k,v in result.__dict__.items() if not k.startswith('_')}
-                
-                if record_id:
-                    audit_entry = models.AuditLog(
-                        table_name=table_name,
-                        record_id=record_id,
-                        action=action,
-                        old_values=json.dumps(old_values, default=str) if old_values else None,
-                        new_values=json.dumps(new_vals, default=str) if new_vals else None,
-                        user_id=current_user.id,
-                        timestamp=datetime.utcnow().isoformat(),
-                        ip_address=None # Difficult to get without Request context cleanly passed everywhere
-                    )
-                    db.add(audit_entry)
-                    db.commit()
-                
+                        new_vals = {k: v for k, v in result.__dict__.items() if not k.startswith('_')}
+
+                # Add audit log entry
+                audit_entry = models.AuditLog(
+                    table_name=table_name,
+                    record_id=record_id,
+                    action=action,
+                    old_values=json.dumps(old_values, default=str) if old_values else None,
+                    new_values=json.dumps(new_vals, default=str) if new_vals else None,
+                    user_id=current_user.id,
+                    timestamp=datetime.utcnow().isoformat(),
+                    ip_address=None
+                )
+                db.add(audit_entry)
+                db.commit()
+
             return result
         return wrapper
     return audit_decorator

@@ -48,13 +48,22 @@ def list_business_cases(
 
 @router.get("/{bc_id}", response_model=schemas.BusinessCase)
 def get_business_case(
-    bc_id: int, 
+    bc_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(check_record_access("BusinessCase", "bc_id", "Read"))
+    current_user: models.User = Depends(get_current_user)
 ):
+    """Get a specific business case - uses hybrid access control."""
+    from app.auth import check_business_case_access
+
     bc = db.query(models.BusinessCase).get(bc_id)
     if not bc:
         raise HTTPException(status_code=404, detail="BusinessCase not found")
+
+    # CRITICAL: Check hybrid access control
+    if current_user.role not in ["Admin", "Manager"]:
+        if not check_business_case_access(current_user, bc, db, "Read"):
+            raise HTTPException(status_code=403, detail="Insufficient permissions to access this business case")
+
     return bc
 
 @router.post("/", response_model=schemas.BusinessCase)

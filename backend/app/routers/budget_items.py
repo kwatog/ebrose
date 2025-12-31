@@ -5,7 +5,7 @@ from datetime import datetime
 
 from .. import models, schemas
 from ..database import SessionLocal
-from ..auth import get_current_user, require_role
+from ..auth import get_current_user, require_role, check_record_access
 
 router = APIRouter(prefix="/budget-items", tags=["budget-items"])
 
@@ -76,7 +76,7 @@ def list_budget_items(
 def get_budget_item(
     id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(check_record_access("BudgetItem", "id", "Read"))
 ):
     """Get a specific budget item by ID."""
     budget_item = db.get(models.BudgetItem, id)

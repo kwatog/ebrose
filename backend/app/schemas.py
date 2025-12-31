@@ -1,5 +1,7 @@
 from pydantic import BaseModel
+from decimal import Decimal
 from typing import Optional, List
+from pydantic import field_validator
 
 
 # --- User ---
@@ -136,10 +138,17 @@ class BudgetItemBase(BaseModel):
     workday_ref: str
     title: str
     description: Optional[str] = None
-    budget_amount: float
+    budget_amount: Decimal
     currency: str
     fiscal_year: int
     owner_group_id: int
+
+    @field_validator('budget_amount', mode='before')
+    @classmethod
+    def round_budget_amount(cls, v):
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class BudgetItemCreate(BudgetItemBase):
     pass
@@ -147,9 +156,18 @@ class BudgetItemCreate(BudgetItemBase):
 class BudgetItemUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    budget_amount: Optional[float] = None
+    budget_amount: Optional[Decimal] = None
     currency: Optional[str] = None
     fiscal_year: Optional[int] = None
+
+    @field_validator('budget_amount', mode='before')
+    @classmethod
+    def round_budget_amount(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class BudgetItem(BudgetItemBase, AuditMixin):
     id: int
@@ -193,8 +211,15 @@ class BusinessCaseLineItemBase(BaseModel):
     title: str
     description: Optional[str] = None
     spend_category: str  # CAPEX or OPEX
-    requested_amount: float
+    requested_amount: Decimal
     currency: str
+
+    @field_validator('requested_amount', mode='before')
+    @classmethod
+    def round_requested_amount(cls, v):
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
     planned_commit_date: Optional[str] = None
     status: Optional[str] = "Draft"
 
@@ -205,10 +230,19 @@ class BusinessCaseLineItemUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     spend_category: Optional[str] = None
-    requested_amount: Optional[float] = None
+    requested_amount: Optional[Decimal] = None
     currency: Optional[str] = None
     planned_commit_date: Optional[str] = None
     status: Optional[str] = None
+
+    @field_validator('requested_amount', mode='before')
+    @classmethod
+    def round_requested_amount(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class BusinessCaseLineItem(BusinessCaseLineItemBase, AuditMixin):
     id: int
@@ -271,13 +305,22 @@ class PurchaseOrderBase(BaseModel):
     po_type: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
-    total_amount: float
-    currency: str
+    total_amount: Optional[Decimal] = None
+    currency: str = "USD"
     spend_category: str  # CAPEX or OPEX
     planned_commit_date: Optional[str] = None
     actual_commit_date: Optional[str] = None
     owner_group_id: int
     status: Optional[str] = "Open"
+
+    @field_validator('total_amount', mode='before')
+    @classmethod
+    def round_total_amount(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class PurchaseOrderCreate(PurchaseOrderBase):
     pass
@@ -288,12 +331,21 @@ class PurchaseOrderUpdate(BaseModel):
     po_type: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
-    total_amount: Optional[float] = None
+    total_amount: Optional[Decimal] = None
     currency: Optional[str] = None
     spend_category: Optional[str] = None
     planned_commit_date: Optional[str] = None
     actual_commit_date: Optional[str] = None
     status: Optional[str] = None
+
+    @field_validator('total_amount', mode='before')
+    @classmethod
+    def round_total_amount(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class PurchaseOrder(PurchaseOrderBase, AuditMixin):
     id: int
@@ -306,17 +358,33 @@ class GoodsReceiptBase(BaseModel):
     po_id: int
     gr_number: str
     gr_date: Optional[str] = None
-    amount: float
+    amount: Decimal
     description: Optional[str] = None
     owner_group_id: int
+
+    @field_validator('amount', mode='before')
+    @classmethod
+    def round_amount(cls, v):
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class GoodsReceiptCreate(GoodsReceiptBase):
     pass
 
 class GoodsReceiptUpdate(BaseModel):
     gr_date: Optional[str] = None
-    amount: Optional[float] = None
+    amount: Optional[Decimal] = None
     description: Optional[str] = None
+
+    @field_validator('amount', mode='before')
+    @classmethod
+    def round_amount(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class GoodsReceipt(GoodsReceiptBase, AuditMixin):
     id: int
@@ -331,9 +399,18 @@ class ResourceBase(BaseModel):
     role: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
-    cost_per_month: Optional[float] = None
+    cost_per_month: Optional[Decimal] = None
     owner_group_id: int
     status: Optional[str] = "Active"
+
+    @field_validator('cost_per_month', mode='before')
+    @classmethod
+    def round_cost_per_month(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class ResourceCreate(ResourceBase):
     pass
@@ -344,8 +421,17 @@ class ResourceUpdate(BaseModel):
     role: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
-    cost_per_month: Optional[float] = None
+    cost_per_month: Optional[Decimal] = None
     status: Optional[str] = None
+
+    @field_validator('cost_per_month', mode='before')
+    @classmethod
+    def round_cost_per_month(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class Resource(ResourceBase, AuditMixin):
     id: int
@@ -359,8 +445,17 @@ class ResourcePOAllocationBase(BaseModel):
     po_id: int
     allocation_start: Optional[str] = None
     allocation_end: Optional[str] = None
-    expected_monthly_burn: Optional[float] = None
+    expected_monthly_burn: Optional[Decimal] = None
     owner_group_id: int
+
+    @field_validator('expected_monthly_burn', mode='before')
+    @classmethod
+    def round_expected_burn(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class ResourcePOAllocationCreate(ResourcePOAllocationBase):
     pass
@@ -368,7 +463,16 @@ class ResourcePOAllocationCreate(ResourcePOAllocationBase):
 class ResourcePOAllocationUpdate(BaseModel):
     allocation_start: Optional[str] = None
     allocation_end: Optional[str] = None
-    expected_monthly_burn: Optional[float] = None
+    expected_monthly_burn: Optional[Decimal] = None
+
+    @field_validator('expected_monthly_burn', mode='before')
+    @classmethod
+    def round_expected_burn(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class ResourcePOAllocation(ResourcePOAllocationBase, AuditMixin):
     id: int

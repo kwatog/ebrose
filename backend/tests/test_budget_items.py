@@ -21,7 +21,7 @@ def test_create_budget_item(client, admin_user, admin_token, test_group):
     data = response.json()
     assert data["workday_ref"] == "WD-2025-001"
     assert data["title"] == "IT Infrastructure Budget"
-    assert data["budget_amount"] == 100000.00
+    assert data["budget_amount"] == "100000.00"  # Decimal serializes to string
     assert data["fiscal_year"] == 2025
     assert data["created_by"] == admin_user.id
 
@@ -117,7 +117,7 @@ def test_update_budget_item(client, admin_user, admin_token, test_group, db_sess
     assert response.status_code == 200
     data = response.json()
     assert data["title"] == "Updated Title"
-    assert data["budget_amount"] == 75000
+    assert data["budget_amount"] == "75000.00"  # Decimal serializes to string
     assert data["updated_by"] == admin_user.id
 
 
