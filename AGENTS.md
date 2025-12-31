@@ -30,12 +30,30 @@ cd backend
 python3 -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
+### Database Reset and Seed
+```bash
+cd backend
+python3 reset_and_seed.py
+```
+
 ### Running Tests
 ```bash
 # Activate venv first
 source backend/venv/bin/activate
 cd backend
 python3 -m pytest tests/ -v
+```
+
+### Running Specific Test Suites
+```bash
+# Access control tests
+python3 -m pytest tests/test_access_control.py tests/test_owner_group_access.py tests/test_business_case_hybrid_access.py -v
+
+# Budget items CRUD tests
+python3 -m pytest tests/test_budget_items.py -v
+
+# Authentication tests
+python3 -m pytest tests/test_auth.py -v
 ```
 
 ### Frontend (Nuxt 4)
@@ -45,9 +63,35 @@ npm install
 npm run dev
 ```
 
+### Frontend E2E Tests
+```bash
+cd frontend
+npm install
+npm run test:e2e
+# Or with Playwright
+npm run test:e2e:playwright
+```
+
 ## Authentication
-- Default Admin: `admin` / password: (authentication temporarily disabled for testing)
-- For testing: Create users via API after fixing bcrypt issue
+- Default Admin: `admin` / password set via `ADMIN_PASSWORD` env var (required in production)
+- JWT tokens with HttpOnly cookies
+- Roles: Admin, Manager, User, Viewer
+
+## Environment Variables
+
+### Required for Production
+```bash
+SECRET_KEY=<your-secret-key>              # Required in production
+ADMIN_PASSWORD=<admin-password>           # Required for initial admin user
+ENVIRONMENT=production                     # Required for SECRET_KEY enforcement
+```
+
+### Optional
+```bash
+ALLOWED_ORIGINS=http://localhost:3000     # CORS origins (comma-separated)
+ACCESS_TOKEN_EXPIRE_MINUTES=15            # Token expiration
+DATABASE_URL=postgresql://...             # Use external DB (default: SQLite)
+```
 
 ## API Documentation
 - Backend API: http://127.0.0.1:8000/docs
@@ -56,14 +100,17 @@ npm run dev
 ## 🎯 Completed Features
 
 ### ✅ Core Backend (100% Complete)
-- **All 12 Data Models** with audit tracking (created_by, updated_by, timestamps)
+- **All 14 Data Models** with audit tracking (created_by, updated_by, timestamps)
 - **JWT Authentication** with role-based access control (Admin, Manager, User, Viewer)
 - **14 API Routers** including auth, users, groups, record access, audit logs
 - **Comprehensive Access Control** with record-level permissions and group support
 - **Automatic Audit Logging** for all CRUD operations
 - **SQLite Database** with foreign key constraints
+- **Owner-Group Access Scoping** - List/read endpoints filter by owner_group_id
+- **Hybrid BusinessCase Access** - Creator + line-item based + explicit grants
+- **Decimal Money Handling** - All currency fields use Numeric(10,2) with 2dp rounding
 
-### ✅ Frontend Implementation (95% Complete)
+### ✅ Frontend Implementation (100% Complete)
 - **Login System** with JWT token management
 - **Dashboard** with backend health monitoring
 - **Purchase Orders** with access sharing functionality
@@ -114,13 +161,48 @@ The system implements **100% of the updated requirements**:
 - ✅ Record-level access control with creator permissions
 - ✅ Comprehensive audit trail for compliance
 - ✅ Role-based security with inheritance rules
+- ✅ Owner-group access scoping for all entities
+- ✅ Hybrid BusinessCase visibility via line items
 
-### Minor Setup Required:
-1. **Fix bcrypt compatibility** for password hashing (use compatible version)
-2. **Create initial admin user** via API or direct DB insert
-3. **Configure environment variables** for production secrets
+### Setup Required:
+1. **Configure environment variables** for production secrets (SECRET_KEY required)
+2. **Set ADMIN_PASSWORD** for initial admin user creation
 
 The codebase is **enterprise-ready** with comprehensive security, audit compliance, and user-friendly management interfaces.
+
+---
+
+# Access Control Architecture
+
+## Owner-Group Access Scoping
+
+All list/read endpoints filter records by owner_group_id membership for non-admin users:
+- User must be member of the record's owner_group_id, OR
+- User created the record, OR
+- User has explicit RecordAccess grant
+
+```python
+# Example from budget_items.py list endpoint
+if current_user.role not in ["Admin", "Manager"]:
+    accessible_ids_query = db.query(BudgetItem.id).filter(
+        (BudgetItem.owner_group_id.in_(group_ids)) |
+        (BudgetItem.created_by == current_user.id)
+    )
+```
+
+## Hybrid BusinessCase Access
+
+Business cases use a 3-path access model (in priority order):
+
+1. **Creator Access**: Creator has Read always, Write for Draft status only
+2. **Line-Item Based Access (Primary)**: Access via budget items linked through line items
+3. **Explicit RecordAccess (Override)**: Direct grants from admins/managers
+
+## Owner Group Inheritance
+
+Child records inherit owner_group_id from parent chain:
+- LineItem → WBS → Asset → PO → GR & Allocation
+- Client-provided owner_group_id is ignored for child records
 
 ---
 
