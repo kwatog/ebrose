@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 
 async function loginAs(page, username, password) {
   await page.goto('/login');
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(1000);
   await page.fill('#username', username);
   await page.fill('#password', password);
   await page.click('button[type="submit"]');
@@ -13,6 +15,7 @@ async function loginAs(page, username, password) {
   }
 
   await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(1000);
 }
 
 test.describe('Access Control UI Tests', () => {
@@ -21,6 +24,7 @@ test.describe('Access Control UI Tests', () => {
     await loginAs(page, 'admin', 'admin123');
     await page.goto('/budget-items');
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     await page.screenshot({
       path: 'tests/screenshots/admin-sees-all-budgets.png',
@@ -32,6 +36,7 @@ test.describe('Access Control UI Tests', () => {
     await loginAs(page, 'user', 'user123');
     await page.goto('/budget-items');
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     await page.screenshot({
       path: 'tests/screenshots/user-filtered-budgets.png',
@@ -43,6 +48,7 @@ test.describe('Access Control UI Tests', () => {
     await loginAs(page, 'user', 'user123');
     await page.goto('/budget-items/999');
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     await page.screenshot({
       path: 'tests/screenshots/access-denied-403.png',
@@ -61,6 +67,7 @@ test.describe('Access Control UI Tests', () => {
     await loginAs(page, 'user', 'user123');
     await page.goto('/business-cases');
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     await page.screenshot({
       path: 'tests/screenshots/bc-creator-access.png',
@@ -72,6 +79,7 @@ test.describe('Access Control UI Tests', () => {
     await loginAs(page, 'user', 'user123');
     await page.goto('/business-cases/1/edit');
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     await page.screenshot({
       path: 'tests/screenshots/bc-transition-validation-error.png',
@@ -83,6 +91,7 @@ test.describe('Access Control UI Tests', () => {
     await loginAs(page, 'admin', 'admin123');
     await page.goto('/admin/groups');
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     await page.screenshot({
       path: 'tests/screenshots/admin-user-groups.png',
@@ -94,6 +103,7 @@ test.describe('Access Control UI Tests', () => {
     await loginAs(page, 'admin', 'admin123');
     await page.goto('/');
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     await page.screenshot({
       path: 'tests/screenshots/dashboard-health-check.png',
@@ -108,6 +118,7 @@ test.describe('Access Control UI Tests', () => {
     await loginAs(page, 'admin', 'admin123');
     await page.goto('/purchase-orders');
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     // Click first Share button if any POs exist
     const shareButtons = page.locator('button:has-text("Share")');
