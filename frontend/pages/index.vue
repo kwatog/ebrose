@@ -1,8 +1,4 @@
 <script setup lang="ts">
-definePageMeta({
-  middleware: 'auth'
-})
-
 const userCookie = useCookie('user_info')
 const user = computed(() => userCookie.value)
 

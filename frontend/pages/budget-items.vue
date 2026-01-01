@@ -2,9 +2,24 @@
 const config = useRuntimeConfig()
 const apiBase = config.apiBase || config.public.apiBase
 const userInfo = useCookie('user_info')
+const { success, error: showError } = useToast()
 
-// Parse user info to check role
-const currentUser = userInfo.value ? JSON.parse(userInfo.value as string) : null
+const decodeUserInfo = (value: string | null | object): any => {
+  if (!value) return null
+  if (typeof value === 'object') return value
+  try {
+    let b64 = String(value)
+    if (b64.startsWith('"') && b64.endsWith('"')) {
+      b64 = b64.slice(1, -1)
+    }
+    const json = decodeURIComponent(escape(atob(b64)))
+    return JSON.parse(json)
+  } catch {
+    return null
+  }
+}
+
+const currentUser = decodeUserInfo(userInfo.value)
 
 interface BudgetItem {
   id: number
@@ -125,21 +140,25 @@ const closeModals = () => {
 
 const createItem = async () => {
   try {
+    loading.value = true
     await useApiFetch('/budget-items', {
       method: 'POST',
       body: form.value
     })
     await fetchItems()
     closeModals()
+    success('Budget item created successfully!')
   } catch (e: any) {
-    console.error(e)
-    alert(`Failed to create budget item: ${e.data?.detail || e.message}`)
+    showError(`Failed to create budget item: ${e.data?.detail || e.message}`)
+  } finally {
+    loading.value = false
   }
 }
 
 const updateItem = async () => {
   if (!selectedItem.value) return
   try {
+    loading.value = true
     await useApiFetch(`/budget-items/${selectedItem.value.id}`, {
       method: 'PUT',
       body: {
@@ -152,9 +171,11 @@ const updateItem = async () => {
     })
     await fetchItems()
     closeModals()
+    success('Budget item updated successfully!')
   } catch (e: any) {
-    console.error(e)
-    alert(`Failed to update budget item: ${e.data?.detail || e.message}`)
+    showError(`Failed to update budget item: ${e.data?.detail || e.message}`)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -163,13 +184,16 @@ const deleteItem = async (item: BudgetItem) => {
     return
   }
   try {
+    loading.value = true
     await useApiFetch(`/budget-items/${item.id}`, {
       method: 'DELETE'
     })
     await fetchItems()
+    success('Budget item deleted successfully!')
   } catch (e: any) {
-    console.error(e)
-    alert(`Failed to delete budget item: ${e.data?.detail || e.message}`)
+    showError(`Failed to delete budget item: ${e.data?.detail || e.message}`)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -362,11 +386,11 @@ onMounted(async () => {
           </div>
 
           <div class="modal-actions">
-            <button type="button" @click="closeModals" class="btn-secondary">
+            <button type="button" @click="closeModals" class="btn-secondary" :disabled="loading">
               Cancel
             </button>
-            <button type="submit" class="btn-primary">
-              Create Budget Item
+            <button type="submit" class="btn-primary" :disabled="loading">
+              {{ loading ? 'Creating...' : 'Create Budget Item' }}
             </button>
           </div>
         </form>
@@ -440,11 +464,11 @@ onMounted(async () => {
           </div>
 
           <div class="modal-actions">
-            <button type="button" @click="closeModals" class="btn-secondary">
+            <button type="button" @click="closeModals" class="btn-secondary" :disabled="loading">
               Cancel
             </button>
-            <button type="submit" class="btn-primary">
-              Save Changes
+            <button type="submit" class="btn-primary" :disabled="loading">
+              {{ loading ? 'Saving...' : 'Save Changes' }}
             </button>
           </div>
         </form>

@@ -4,8 +4,22 @@ const apiBase = config.apiBase || config.public.apiBase
 const token = useCookie('access_token')
 const userInfo = useCookie('user_info')
 
-// Parse user info to check role
-const currentUser = userInfo.value ? JSON.parse(userInfo.value as string) : null
+const decodeUserInfo = (value: string | null | object): any => {
+  if (!value) return null
+  if (typeof value === 'object') return value
+  try {
+    let b64 = String(value)
+    if (b64.startsWith('"') && b64.endsWith('"')) {
+      b64 = b64.slice(1, -1)
+    }
+    const json = decodeURIComponent(escape(atob(b64)))
+    return JSON.parse(json)
+  } catch {
+    return null
+  }
+}
+
+const currentUser = decodeUserInfo(userInfo.value)
 
 // Redirect if not Manager or Admin
 if (!currentUser || !['Manager', 'Admin'].includes(currentUser.role)) {

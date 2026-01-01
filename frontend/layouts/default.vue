@@ -2,11 +2,25 @@
 const userCookie = useCookie('user_info')
 const tokenCookie = useCookie('access_token')
 
-const user = ref(userCookie.value)
+const decodeUserInfo = (value: string | null | object): any => {
+  if (!value) return null
+  if (typeof value === 'object') return value
+  try {
+    let b64 = String(value)
+    if (b64.startsWith('"') && b64.endsWith('"')) {
+      b64 = b64.slice(1, -1)
+    }
+    const json = decodeURIComponent(escape(atob(b64)))
+    return JSON.parse(json)
+  } catch {
+    return null
+  }
+}
 
-// Watch for changes in the cookie to update UI
+const user = ref(decodeUserInfo(userCookie.value))
+
 watch(userCookie, (newVal) => {
-  user.value = newVal
+  user.value = decodeUserInfo(newVal)
 })
 
 const logout = async () => {

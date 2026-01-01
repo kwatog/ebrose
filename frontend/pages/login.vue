@@ -1,17 +1,30 @@
 <script setup lang="ts">
 const config = useRuntimeConfig()
 const apiBase = config.apiBase || config.public.apiBase
+const { success, error: showError } = useToast()
 
 const form = ref({
   username: '',
   password: ''
 })
 const loading = ref(false)
-const error = ref<string | null>(null)
+
+const decodeUserInfo = (value: string | null): any => {
+  if (!value) return null
+  try {
+    let b64 = value
+    if (b64.startsWith('"') && b64.endsWith('"')) {
+      b64 = b64.slice(1, -1)
+    }
+    const json = decodeURIComponent(escape(atob(b64)))
+    return JSON.parse(json)
+  } catch {
+    return null
+  }
+}
 
 const login = async () => {
   loading.value = true
-  error.value = null
   
   try {
     const response = await $fetch<{message: string, user: any}>(`${apiBase}/auth/login`, {
@@ -24,23 +37,14 @@ const login = async () => {
       })
     })
     
-    // Backend sets HttpOnly access_token and base64-encoded user_info cookie.
-    // Decode and store user_info for UI state.
     const userCookie = useCookie('user_info')
-    if (userCookie.value) {
-      try {
-        const decoded = JSON.parse(atob(userCookie.value))
-        userCookie.value = decoded
-      } catch {
-        userCookie.value = response.user
-      }
-    } else {
-      userCookie.value = response.user
-    }
+    const decoded = decodeUserInfo(userCookie.value)
+    userCookie.value = decoded || response.user
     
+    success('Login successful!')
     await navigateTo('/')
   } catch (e: any) {
-    error.value = e.data?.detail || 'Login failed'
+    showError(e.data?.detail || 'Login failed')
   } finally {
     loading.value = false
   }
@@ -75,8 +79,6 @@ const login = async () => {
             class="form-input"
           />
         </div>
-        
-        <p v-if="error" class="error-message">{{ error }}</p>
         
         <button 
           type="submit" 
@@ -139,11 +141,5 @@ const login = async () => {
 .login-btn {
   width: 100%;
   margin-top: 1rem;
-}
-
-.error-message {
-  color: #dc2626;
-  font-size: 0.875rem;
-  margin: 0.5rem 0;
 }
 </style>

@@ -1,7 +1,4 @@
 <script setup lang="ts">
-definePageMeta({
-  middleware: 'auth'
-})
 
 interface ResourceAllocation {
   id: number

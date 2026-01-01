@@ -172,22 +172,24 @@ cd "$FRONTEND_DIR"
 
 # Run Playwright in container
 $CONTAINER_CMD run --rm \
-  --network="host" \
   -v "$FRONTEND_DIR:/work:z" \
+  -v "$HOME/.certs/starhub-root-ca.crt:/usr/local/share/ca-certificates/starhub-root-ca.crt:ro,z" \
   -w /work \
   --ipc=host \
+  -e CI=true \
+  -e BASE_URL=http://host.docker.internal:3000 \
   mcr.microsoft.com/playwright:v1.57.0-jammy \
   /bin/bash -c "
     set -e
+    echo '🔐 Installing corporate certificate...'
+    update-ca-certificates 2>/dev/null || true
+    echo '✅ Certificate installed'
+    echo ''
     echo '📦 Installing dependencies...'
     npm install --silent 2>/dev/null
     echo '✅ Dependencies installed'
     echo ''
-    echo '🌐 Ensuring Chromium browser...'
-    npx playwright install chromium --with-deps 2>/dev/null
-    echo '✅ Browser ready'
-    echo ''
-    echo '🧪 Running UI tests...'
+    echo '🧪 Running UI tests (using pre-installed Chromium)...'
     npx playwright test tests/e2e/ --reporter=list --project=chromium
   "
 
