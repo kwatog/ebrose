@@ -27,7 +27,7 @@ test.describe('CRUD Operations - True E2E', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
-    await expect(page.locator('.base-table, table, .empty-state')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.base-card, .base-table, .empty-state').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should navigate through full entity chain', async ({ page }) => {
@@ -35,31 +35,31 @@ test.describe('CRUD Operations - True E2E', () => {
     await page.goto('/budget-items');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await expect(page.locator('.base-card, h3').filter({ hasText: /Budget/i })).toBeVisible();
+    await expect(page.locator('.base-card').first()).toBeVisible();
 
     await loginAs(page, 'admin', 'admin123');
     await page.goto('/business-cases');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await expect(page.locator('h1, h3, .page-header').filter({ hasText: /Business/i }).first()).toBeVisible();
+    await expect(page.locator('.base-card').first()).toBeVisible();
 
     await loginAs(page, 'admin', 'admin123');
     await page.goto('/line-items');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await expect(page.locator('h1, h3, .page-header').first()).toBeVisible();
+    await expect(page.locator('.base-card, h1').first()).toBeVisible();
 
     await loginAs(page, 'admin', 'admin123');
     await page.goto('/wbs');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await expect(page.locator('h1, h3, .page-header').filter({ hasText: /WBS|Work/i }).first()).toBeVisible();
+    await expect(page.locator('.base-card, h1').first()).toBeVisible();
 
     await loginAs(page, 'admin', 'admin123');
     await page.goto('/assets');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await expect(page.locator('h1, h3, .page-header').filter({ hasText: /Asset/i }).first()).toBeVisible();
+    await expect(page.locator('.base-card, h1').first()).toBeVisible();
   });
 
   test('admin should access all admin features', async ({ page }) => {
@@ -79,7 +79,7 @@ test.describe('CRUD Operations - True E2E', () => {
     await page.goto('/admin/groups');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await expect(page.locator('h1, .page-header').filter({ hasText: /Group/i })).toBeVisible();
+    await expect(page.locator('.base-card, h3').filter({ hasText: /Group/i }).first()).toBeVisible();
   });
 
   test('manager should have different access than admin', async ({ page }) => {

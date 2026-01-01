@@ -1,8 +1,8 @@
 <script setup lang="ts">
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
-const token = useCookie('access_token')
 const userInfo = useCookie('user_info')
+const { success, error: showError } = useToast()
 
 const decodeUserInfo = (value: string | null | object): any => {
   if (!value) return null
@@ -21,7 +21,6 @@ const decodeUserInfo = (value: string | null | object): any => {
 
 const currentUser = decodeUserInfo(userInfo.value)
 
-// Redirect if not Manager or Admin
 if (!currentUser || !['Manager', 'Admin'].includes(currentUser.role)) {
   await navigateTo('/')
 }
@@ -57,7 +56,6 @@ const groupMembers = ref<GroupMembership[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
-// Form states
 const showCreateGroupModal = ref(false)
 const showAddMemberModal = ref(false)
 const newGroup = ref({
@@ -65,6 +63,16 @@ const newGroup = ref({
   description: ''
 })
 const selectedUserId = ref<number | null>(null)
+
+const userOptions = computed(() => {
+  const memberUserIds = groupMembers.value.map(m => m.user_id)
+  return users.value
+    .filter(u => !memberUserIds.includes(u.id))
+    .map(u => ({ 
+      value: u.id, 
+      label: `${u.full_name} (@${u.username}) - ${u.role}` 
+    }))
+})
 
 const fetchGroups = async () => {
   try {
@@ -97,18 +105,17 @@ const fetchGroupMembers = async (groupId: number) => {
 const createGroup = async () => {
   try {
     await useApiFetch(`/user-groups`, { method: 'POST', body: newGroup.value })
-    
     newGroup.value = { name: '', description: '' }
     showCreateGroupModal.value = false
     await fetchGroups()
+    success('Group created successfully!')
   } catch (e: any) {
-    error.value = e.data?.detail || 'Failed to create group'
+    showError(e.data?.detail || 'Failed to create group')
   }
 }
 
 const addMemberToGroup = async () => {
   if (!selectedGroup.value || !selectedUserId.value) return
-  
   try {
     await useApiFetch(`/user-groups/${selectedGroup.value.id}/members`, {
       method: 'POST',
@@ -117,24 +124,23 @@ const addMemberToGroup = async () => {
         group_id: selectedGroup.value.id
       }
     })
-    
     selectedUserId.value = null
     showAddMemberModal.value = false
     await fetchGroupMembers(selectedGroup.value.id)
+    success('Member added successfully!')
   } catch (e: any) {
-    error.value = e.data?.detail || 'Failed to add member'
+    showError(e.data?.detail || 'Failed to add member')
   }
 }
 
 const removeMemberFromGroup = async (userId: number) => {
   if (!selectedGroup.value) return
-  
   try {
     await useApiFetch(`/user-groups/${selectedGroup.value.id}/members/${userId}`, { method: 'DELETE' })
-    
     await fetchGroupMembers(selectedGroup.value.id)
+    success('Member removed successfully!')
   } catch (e: any) {
-    error.value = e.data?.detail || 'Failed to remove member'
+    showError(e.data?.detail || 'Failed to remove member')
   }
 }
 
@@ -155,363 +161,222 @@ onMounted(async () => {
 
 <template>
   <div>
-    <div class="admin-header">
-      <h1 class="page-title">User Groups Management</h1>
-      <p class="page-subtitle">Manage user groups and memberships</p>
-      
-      <button 
-        @click="showCreateGroupModal = true" 
-        class="btn-primary"
-        style="margin-top: 1rem;"
-      >
-        Create New Group
-      </button>
-    </div>
+    <BaseCard title="User Groups Management" subtitle="Manage user groups and memberships">
+      <template #header>
+        <div class="header-actions">
+          <BaseButton variant="primary" @click="showCreateGroupModal = true">
+            Create New Group
+          </BaseButton>
+        </div>
+      </template>
 
-    <p v-if="loading">Loading groups...</p>
-    <p v-else-if="error" style="color: #dc2626;">{{ error }}</p>
-    
-    <div v-else class="groups-layout">
-      <!-- Groups List -->
-      <div class="groups-panel card">
-        <h2 class="card-title">Groups ({{ groups.length }})</h2>
-        
-        <div v-if="groups.length === 0" class="empty-state">
-          No groups found. Create your first group!
-        </div>
-        
-        <div v-else class="groups-list">
-          <div 
-            v-for="group in groups" 
-            :key="group.id"
-            class="group-item"
-            :class="{ active: selectedGroup?.id === group.id }"
-            @click="selectGroup(group)"
-          >
-            <div class="group-name">{{ group.name }}</div>
-            <div class="group-desc">{{ group.description || 'No description' }}</div>
-          </div>
-        </div>
+      <div v-if="loading" class="loading-state">
+        <LoadingSpinner size="lg" label="Loading groups..." />
       </div>
 
-      <!-- Group Members -->
-      <div v-if="selectedGroup" class="members-panel card">
-        <div class="panel-header">
-          <h2 class="card-title">{{ selectedGroup.name }} Members</h2>
-          <button 
-            @click="showAddMemberModal = true" 
-            class="btn-primary btn-small"
-          >
-            Add Member
-          </button>
-        </div>
-        
-        <div v-if="groupMembers.length === 0" class="empty-state">
-          No members in this group.
-        </div>
-        
-        <div v-else class="members-list">
-          <div 
-            v-for="membership in groupMembers" 
-            :key="membership.id"
-            class="member-item"
-          >
-            <div class="member-info">
-              <div class="member-name">
-                {{ getUserById(membership.user_id)?.full_name || 'Unknown User' }}
-              </div>
-              <div class="member-details">
-                @{{ getUserById(membership.user_id)?.username }} • 
-                {{ getUserById(membership.user_id)?.role }}
-              </div>
+      <p v-else-if="error" class="error-message">{{ error }}</p>
+
+      <div v-else class="groups-layout">
+        <BaseCard title="Groups" :subtitle="`${groups.length} groups`" padding="md">
+          <EmptyState
+            v-if="groups.length === 0"
+            title="No groups found"
+            description="Create your first group to get started."
+            action-text="Create Group"
+            @action="showCreateGroupModal = true"
+          />
+
+          <div v-else class="groups-list">
+            <div 
+              v-for="group in groups" 
+              :key="group.id"
+              class="group-item"
+              :class="{ active: selectedGroup?.id === group.id }"
+              @click="selectGroup(group)"
+            >
+              <div class="group-name">{{ group.name }}</div>
+              <div class="group-desc">{{ group.description || 'No description' }}</div>
             </div>
-            <button 
-              @click="removeMemberFromGroup(membership.user_id)"
-              class="btn-danger btn-small"
-            >
-              Remove
-            </button>
           </div>
-        </div>
-      </div>
-      
-      <!-- Placeholder when no group selected -->
-      <div v-else class="placeholder-panel card">
-        <div class="placeholder-content">
-          <h3>Select a Group</h3>
-          <p>Choose a group from the left to view and manage its members.</p>
-        </div>
-      </div>
-    </div>
+        </BaseCard>
 
-    <!-- Create Group Modal -->
-    <div v-if="showCreateGroupModal" class="modal-overlay" @click="showCreateGroupModal = false">
-      <div class="modal" @click.stop>
-        <h3>Create New Group</h3>
-        
-        <form @submit.prevent="createGroup">
-          <div class="form-group">
-            <label for="groupName">Group Name</label>
-            <input 
-              id="groupName"
-              v-model="newGroup.name" 
-              type="text" 
-              required 
-              class="form-input"
-            />
-          </div>
-          
-          <div class="form-group">
-            <label for="groupDesc">Description</label>
-            <textarea 
-              id="groupDesc"
-              v-model="newGroup.description" 
-              class="form-input"
-              rows="3"
-            ></textarea>
-          </div>
-          
-          <div class="modal-actions">
-            <button type="button" @click="showCreateGroupModal = false" class="btn-secondary">
-              Cancel
-            </button>
-            <button type="submit" class="btn-primary">
-              Create Group
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <BaseCard v-if="selectedGroup" :title="`${selectedGroup.name} Members`" padding="md">
+          <template #header>
+            <div class="panel-header">
+              <BaseButton size="sm" variant="primary" @click="showAddMemberModal = true">
+                Add Member
+              </BaseButton>
+            </div>
+          </template>
 
-    <!-- Add Member Modal -->
-    <div v-if="showAddMemberModal" class="modal-overlay" @click="showAddMemberModal = false">
-      <div class="modal" @click.stop>
-        <h3>Add Member to {{ selectedGroup?.name }}</h3>
-        
-        <form @submit.prevent="addMemberToGroup">
-          <div class="form-group">
-            <label for="userSelect">Select User</label>
-            <select 
-              id="userSelect"
-              v-model="selectedUserId" 
-              required 
-              class="form-input"
+          <EmptyState
+            v-if="groupMembers.length === 0"
+            title="No members"
+            description="Add members to this group."
+          />
+
+          <div v-else class="members-list">
+            <div 
+              v-for="membership in groupMembers" 
+              :key="membership.id"
+              class="member-item"
             >
-              <option value="">Choose a user...</option>
-              <option 
-                v-for="user in users.filter(u => !groupMembers.some(m => m.user_id === u.id))" 
-                :key="user.id"
-                :value="user.id"
+              <div class="member-info">
+                <div class="member-name">
+                  {{ getUserById(membership.user_id)?.full_name || 'Unknown User' }}
+                </div>
+                <div class="member-details">
+                  @{{ getUserById(membership.user_id)?.username }} - 
+                  {{ getUserById(membership.user_id)?.role }}
+                </div>
+              </div>
+              <BaseButton
+                size="sm"
+                variant="danger"
+                @click="removeMemberFromGroup(membership.user_id)"
               >
-                {{ user.full_name }} (@{{ user.username }}) - {{ user.role }}
-              </option>
-            </select>
+                Remove
+              </BaseButton>
+            </div>
           </div>
-          
-          <div class="modal-actions">
-            <button type="button" @click="showAddMemberModal = false" class="btn-secondary">
-              Cancel
-            </button>
-            <button type="submit" class="btn-primary">
-              Add Member
-            </button>
-          </div>
-        </form>
+        </BaseCard>
+
+        <BaseCard v-else padding="lg">
+          <EmptyState
+            title="Select a Group"
+            description="Choose a group from the left to view and manage its members."
+          />
+        </BaseCard>
       </div>
-    </div>
+    </BaseCard>
+
+    <BaseModal v-model="showCreateGroupModal" title="Create New Group" size="md">
+      <form @submit.prevent="createGroup">
+        <BaseInput
+          v-model="newGroup.name"
+          label="Group Name"
+          placeholder="e.g., Engineering Team"
+          required
+        />
+
+        <BaseTextarea
+          v-model="newGroup.description"
+          label="Description"
+          placeholder="Optional description"
+          rows="3"
+        />
+      </form>
+
+      <template #footer>
+        <BaseButton variant="secondary" @click="showCreateGroupModal = false">
+          Cancel
+        </BaseButton>
+        <BaseButton variant="primary" @click="createGroup">
+          Create Group
+        </BaseButton>
+      </template>
+    </BaseModal>
+
+    <BaseModal v-model="showAddMemberModal" :title="`Add Member to ${selectedGroup?.name}`" size="md">
+      <form @submit.prevent="addMemberToGroup">
+        <BaseSelect
+          v-model="selectedUserId"
+          :options="userOptions"
+          label="Select User"
+          placeholder="Choose a user..."
+          required
+        />
+      </form>
+
+      <template #footer>
+        <BaseButton variant="secondary" @click="showAddMemberModal = false">
+          Cancel
+        </BaseButton>
+        <BaseButton variant="primary" @click="addMemberToGroup" :disabled="!selectedUserId">
+          Add Member
+        </BaseButton>
+      </template>
+    </BaseModal>
   </div>
 </template>
 
 <style scoped>
-.admin-header {
-  margin-bottom: 2rem;
-}
-
-.page-title {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.page-subtitle {
-  color: var(--color-muted);
-  font-size: 1.1rem;
-  margin-bottom: 0;
+.header-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .groups-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  min-height: 500px;
+  gap: var(--spacing-6);
+  min-height: 400px;
 }
 
 .panel-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  margin-bottom: 1rem;
 }
 
 .groups-list, .members-list {
-  space-y: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
 }
 
-.group-item, .member-item {
-  padding: 1rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+.group-item {
+  padding: var(--spacing-4);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all 0.2s;
-  margin-bottom: 0.75rem;
+  transition: all var(--transition-fast);
 }
 
 .group-item:hover {
   border-color: var(--color-primary);
-  background-color: rgba(30, 215, 96, 0.05);
+  background-color: rgba(var(--color-primary-rgb), 0.05);
 }
 
 .group-item.active {
   border-color: var(--color-primary);
-  background-color: rgba(30, 215, 96, 0.1);
+  background-color: rgba(var(--color-primary-rgb), 0.1);
 }
 
 .group-name, .member-name {
   font-weight: 600;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--spacing-1);
 }
 
 .group-desc, .member-details {
-  font-size: 0.9rem;
-  color: var(--color-muted);
+  font-size: var(--text-sm);
+  color: var(--color-gray-500);
 }
 
 .member-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: default;
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
 }
 
-.member-item:hover {
-  border-color: #cbd5e1;
-}
-
-.placeholder-panel {
+.loading-state {
   display: flex;
-  align-items: center;
   justify-content: center;
+  padding: var(--spacing-12);
 }
 
-.placeholder-content {
+.error-message {
+  color: var(--color-error);
+  padding: var(--spacing-4);
   text-align: center;
-  color: var(--color-muted);
-}
-
-.empty-state {
-  text-align: center;
-  color: var(--color-muted);
-  padding: 2rem;
-  font-style: italic;
-}
-
-.btn-small {
-  padding: 0.5rem 1rem;
-  font-size: 0.9rem;
-}
-
-.btn-secondary {
-  background-color: #f1f5f9;
-  color: #475569;
-  border: 1px solid #cbd5e1;
-  padding: 0.6rem 1.3rem;
-  border-radius: 999px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.btn-danger {
-  background-color: #dc2626;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  width: 100%;
-  max-width: 500px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.modal h3 {
-  margin-top: 0;
-  margin-bottom: 1.5rem;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
-
-.form-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 1rem;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(30, 215, 96, 0.1);
-}
-
-textarea.form-input {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 1.5rem;
 }
 
 @media (max-width: 900px) {
   .groups-layout {
     grid-template-columns: 1fr;
-  }
-  
-  .modal {
-    margin: 1rem;
-    max-width: none;
   }
 }
 </style>

@@ -2,6 +2,7 @@
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
 const userInfo = useCookie('user_info')
+const { success, error: showError } = useToast()
 
 const decodeUserInfo = (value: string | null | object): any => {
   if (!value) return null
@@ -27,7 +28,7 @@ interface BusinessCase {
   requestor?: string
   dept?: string
   lead_group_id?: number
-  estimated_cost?: string  // Changed from number to string for Decimal precision
+  estimated_cost?: string
   status?: string
   created_by?: number
   updated_by?: number
@@ -46,27 +47,37 @@ const groups = ref<UserGroup[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
-// Filter state
 const filterStatus = ref<string | null>(null)
 const filterRequestor = ref<string>('')
 
-// Modal state
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const selectedCase = ref<BusinessCase | null>(null)
 
-// Form state
 const form = ref({
   title: '',
   description: '',
   requestor: '',
   dept: '',
   lead_group_id: null as number | null,
-  estimated_cost: '',  // Changed from 0 to '' for string-based handling
+  estimated_cost: '',
   status: 'Draft'
 })
 
 const statuses = ['Draft', 'Submitted', 'Under Review', 'Approved', 'Rejected', 'Completed']
+
+const groupOptions = computed(() => 
+  groups.value.map(g => ({ value: g.id, label: g.name }))
+)
+
+const statusOptions = computed(() => 
+  statuses.map(s => ({ value: s, label: s }))
+)
+
+const filterStatusOptions = computed(() => [
+  { value: null, label: 'All Statuses' },
+  ...statusOptions.value
+])
 
 const fetchGroups = async () => {
   try {
@@ -108,7 +119,7 @@ const resetForm = () => {
     requestor: currentUser?.full_name || '',
     dept: currentUser?.department || '',
     lead_group_id: null,
-    estimated_cost: 0,
+    estimated_cost: '',
     status: 'Draft'
   }
 }
@@ -122,6 +133,7 @@ const openEditModal = (bc: BusinessCase) => {
   selectedCase.value = bc
   form.value = {
     title: bc.title || '',
+    description: bc.description || '',
     requestor: bc.requestor || '',
     dept: bc.dept || '',
     lead_group_id: bc.lead_group_id || null,
@@ -140,30 +152,36 @@ const closeModals = () => {
 
 const createCase = async () => {
   try {
+    loading.value = true
     await useApiFetch('/business-cases', {
       method: 'POST',
       body: form.value
     })
     await fetchCases()
     closeModals()
+    success('Business case created successfully!')
   } catch (e: any) {
-    console.error(e)
-    alert(`Failed to create business case: ${e.data?.detail || e.message}`)
+    showError(`Failed to create business case: ${e.data?.detail || e.message}`)
+  } finally {
+    loading.value = false
   }
 }
 
 const updateCase = async () => {
   if (!selectedCase.value) return
   try {
+    loading.value = true
     await useApiFetch(`/business-cases/${selectedCase.value.id}`, {
       method: 'PUT',
       body: form.value
     })
     await fetchCases()
     closeModals()
+    success('Business case updated successfully!')
   } catch (e: any) {
-    console.error(e)
-    alert(`Failed to update business case: ${e.data?.detail || e.message}`)
+    showError(`Failed to update business case: ${e.data?.detail || e.message}`)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -172,13 +190,16 @@ const deleteCase = async (bc: BusinessCase) => {
     return
   }
   try {
+    loading.value = true
     await useApiFetch(`/business-cases/${bc.id}`, {
       method: 'DELETE'
     })
     await fetchCases()
+    success('Business case deleted successfully!')
   } catch (e: any) {
-    console.error(e)
-    alert(`Failed to delete business case: ${e.data?.detail || e.message}`)
+    showError(`Failed to delete business case: ${e.data?.detail || e.message}`)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -193,16 +214,37 @@ const canDelete = () => {
 }
 
 const getStatusColor = (status?: string) => {
-  const colors: Record<string, string> = {
-    'Draft': '#6b7280',
-    'Submitted': '#3b82f6',
-    'Under Review': '#f59e0b',
-    'Approved': '#10b981',
-    'Rejected': '#ef4444',
-    'Completed': '#8b5cf6'
+  const colors: Record<string, 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info'> = {
+    'Draft': 'secondary',
+    'Submitted': 'info',
+    'Under Review': 'warning',
+    'Approved': 'success',
+    'Rejected': 'danger',
+    'Completed': 'primary'
   }
-  return colors[status || 'Draft'] || '#6b7280'
+  return colors[status || 'Draft'] || 'secondary'
 }
+
+const getGroupName = (id?: number) => groups.value.find(g => g.id === id)?.name || '-'
+
+const formatCurrency = (amount?: string) => {
+  if (!amount) return '-'
+  const num = parseFloat(amount)
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(num)
+}
+
+const tableColumns = [
+  { key: 'title', label: 'Title', sortable: true },
+  { key: 'requestor', label: 'Requestor', sortable: true },
+  { key: 'dept', label: 'Department', sortable: false },
+  { key: 'lead_group', label: 'Lead Group', sortable: false },
+  { key: 'estimated_cost', label: 'Estimated Cost', sortable: true, align: 'right' as const },
+  { key: 'status', label: 'Status', sortable: true },
+  { key: 'actions', label: 'Actions', sortable: false }
+]
 
 onMounted(async () => {
   await fetchGroups()
@@ -211,537 +253,278 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="card">
-    <div class="header-row">
-      <div>
-        <h1 class="card-title">Business Cases</h1>
-        <p class="card-sub">Track business case requests and approvals</p>
+  <BaseCard title="Business Cases" subtitle="Track business case requests and approvals">
+    <template #header>
+      <div class="header-actions">
+        <BaseButton variant="primary" @click="openCreateModal">
+          + Create Business Case
+        </BaseButton>
       </div>
-      <button @click="openCreateModal" class="btn-primary">
-        + Create Business Case
-      </button>
-    </div>
+    </template>
 
-    <!-- Filters -->
     <div class="filters">
-      <div class="filter-group">
-        <label>Status:</label>
-        <select v-model="filterStatus" @change="fetchCases">
-          <option :value="null">All Statuses</option>
-          <option v-for="status in statuses" :key="status" :value="status">
-            {{ status }}
-          </option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Requestor:</label>
-        <input
-          v-model="filterRequestor"
-          type="text"
-          placeholder="Filter by name..."
-          @input="fetchCases"
+      <BaseSelect
+        v-model="filterStatus"
+        :options="filterStatusOptions"
+        label="Status"
+        @change="fetchCases"
+      />
+      <BaseInput
+        v-model="filterRequestor"
+        label="Requestor"
+        placeholder="Filter by name..."
+        @input="fetchCases"
+      />
+    </div>
+
+    <div v-if="loading" class="loading-state">
+      <LoadingSpinner size="lg" label="Loading business cases..." />
+    </div>
+
+    <p v-else-if="error" class="error-message">{{ error }}</p>
+
+    <EmptyState
+      v-else-if="cases.length === 0"
+      title="No business cases found"
+      description="Click 'Create Business Case' to add your first business case."
+      action-text="Create Business Case"
+      @action="openCreateModal"
+    />
+
+    <BaseTable
+      v-else
+      :columns="tableColumns"
+      :data="cases"
+      :loading="loading"
+      selectable
+      sticky-header
+      empty-message="No business cases found"
+      @row-click="openEditModal"
+    >
+      <template #cell-title="{ row, value }">
+        <div>
+          <strong>{{ value }}</strong>
+          <div v-if="row.description" class="description">{{ row.description }}</div>
+        </div>
+      </template>
+
+      <template #cell-lead_group="{ row }">
+        <BaseBadge variant="primary" size="sm">{{ getGroupName(row.lead_group_id) }}</BaseBadge>
+      </template>
+
+      <template #cell-estimated_cost="{ value }">
+        <span class="amount">{{ formatCurrency(value) }}</span>
+      </template>
+
+      <template #cell-status="{ value }">
+        <BaseBadge :variant="getStatusColor(value)" size="sm">{{ value || 'Draft' }}</BaseBadge>
+      </template>
+
+      <template #cell-actions="{ row }">
+        <div class="action-buttons" v-if="canEdit(row) || canDelete()">
+          <BaseButton
+            v-if="canEdit(row)"
+            size="sm"
+            variant="secondary"
+            @click="openEditModal(row)"
+          >
+            Edit
+          </BaseButton>
+          <BaseButton
+            v-if="canDelete()"
+            size="sm"
+            variant="danger"
+            @click="deleteCase(row)"
+          >
+            Delete
+          </BaseButton>
+        </div>
+      </template>
+    </BaseTable>
+
+    <BaseModal v-model="showCreateModal" title="Create Business Case" size="lg">
+      <form @submit.prevent="createCase">
+        <BaseInput
+          v-model="form.title"
+          label="Title"
+          placeholder="e.g., Cloud Migration Project"
+          required
         />
-      </div>
-    </div>
 
-    <p v-if="loading">Loading…</p>
-    <p v-else-if="error" style="color: #cc0000;">{{ error }}</p>
-    <div v-else-if="cases.length === 0" class="empty-state">
-      No business cases found. Click "Create Business Case" to add one.
-    </div>
-    <table v-else class="data-table">
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Requestor</th>
-          <th>Department</th>
-          <th>Lead Group</th>
-          <th>Estimated Cost</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="bc in cases" :key="bc.id">
-          <td>
-            <strong>{{ bc.title }}</strong>
-            <div v-if="bc.description" class="description">{{ bc.description }}</div>
-          </td>
-          <td>{{ bc.requestor || '-' }}</td>
-          <td>{{ bc.dept || '-' }}</td>
-          <td>
-            <span v-if="bc.lead_group_id" class="badge badge-group">
-              {{ groups.find(g => g.id === bc.lead_group_id)?.name || 'Unknown' }}
-            </span>
-            <span v-else class="text-muted">-</span>
-          </td>
-          <td>
-            <span v-if="bc.estimated_cost" class="amount">
-              ${{ parseFloat(bc.estimated_cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
-            </span>
-            <span v-else class="text-muted">-</span>
-          </td>
-          <td>
-            <span
-              class="badge badge-status"
-              :style="{ backgroundColor: getStatusColor(bc.status) }"
-            >
-              {{ bc.status || 'Draft' }}
-            </span>
-          </td>
-          <td>
-            <div class="action-buttons">
-              <button
-                v-if="canEdit(bc)"
-                @click="openEditModal(bc)"
-                class="btn-small btn-edit"
-                title="Edit"
-              >
-                ✏️ Edit
-              </button>
-              <button
-                v-if="canDelete()"
-                @click="deleteCase(bc)"
-                class="btn-small btn-delete"
-                title="Delete"
-              >
-                🗑️ Delete
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+        <BaseTextarea
+          v-model="form.description"
+          label="Description"
+          placeholder="Detailed description of the business case..."
+          rows="4"
+        />
 
-    <!-- Create Modal -->
-    <div v-if="showCreateModal" class="modal-overlay" @click.self="closeModals">
-      <div class="modal">
-        <h2>Create Business Case</h2>
-        <form @submit.prevent="createCase">
-          <div class="form-group">
-            <label>Title <span class="required">*</span></label>
-            <input
-              v-model="form.title"
-              type="text"
-              placeholder="e.g., Cloud Migration Project"
-              required
-            />
-          </div>
+        <div class="form-row">
+          <BaseInput
+            v-model="form.requestor"
+            label="Requestor"
+            placeholder="Name"
+            required
+          />
+          <BaseInput
+            v-model="form.dept"
+            label="Department"
+            placeholder="Department"
+            required
+          />
+        </div>
 
-          <div class="form-group">
-            <label>Description</label>
-            <textarea
-              v-model="form.description"
-              rows="4"
-              placeholder="Detailed description of the business case..."
-            ></textarea>
-          </div>
+        <BaseSelect
+          v-model="form.lead_group_id"
+          :options="groupOptions"
+          label="Lead Group"
+        />
 
-          <div class="form-row">
-            <div class="form-group">
-              <label>Requestor <span class="required">*</span></label>
-              <input
-                v-model="form.requestor"
-                type="text"
-                placeholder="Name"
-                required
-              />
-            </div>
+        <div class="form-row">
+          <BaseInput
+            v-model="form.estimated_cost"
+            label="Estimated Cost (USD)"
+            placeholder="0.00"
+            type="text"
+          />
+          <BaseSelect
+            v-model="form.status"
+            :options="statusOptions"
+            label="Status"
+            required
+          />
+        </div>
+      </form>
 
-            <div class="form-group">
-              <label>Department <span class="required">*</span></label>
-              <input
-                v-model="form.dept"
-                type="text"
-                placeholder="Department"
-                required
-              />
-            </div>
-          </div>
+      <template #footer>
+        <BaseButton variant="secondary" :disabled="loading" @click="closeModals">
+          Cancel
+        </BaseButton>
+        <BaseButton variant="primary" :loading="loading" @click="createCase">
+          Create Business Case
+        </BaseButton>
+      </template>
+    </BaseModal>
 
-          <div class="form-group">
-            <label>Lead Group</label>
-            <select v-model.number="form.lead_group_id">
-              <option :value="null">No lead group</option>
-              <option v-for="group in groups" :key="group.id" :value="group.id">
-                {{ group.name }}
-              </option>
-            </select>
-          </div>
+    <BaseModal v-model="showEditModal" title="Edit Business Case" size="lg">
+      <form @submit.prevent="updateCase">
+        <BaseInput
+          v-model="form.title"
+          label="Title"
+          required
+        />
 
-          <div class="form-row">
-            <div class="form-group">
-              <label>Estimated Cost (USD)</label>
-              <input
-                v-model="form.estimated_cost"
-                type="text"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-              />
-            </div>
+        <BaseTextarea
+          v-model="form.description"
+          label="Description"
+          rows="4"
+        />
 
-            <div class="form-group">
-              <label>Status <span class="required">*</span></label>
-              <select v-model="form.status" required>
-                <option v-for="status in statuses" :key="status" :value="status">
-                  {{ status }}
-                </option>
-              </select>
-            </div>
-          </div>
+        <div class="form-row">
+          <BaseInput
+            v-model="form.requestor"
+            label="Requestor"
+            required
+          />
+          <BaseInput
+            v-model="form.dept"
+            label="Department"
+            required
+          />
+        </div>
 
-          <div class="modal-actions">
-            <button type="button" @click="closeModals" class="btn-secondary">
-              Cancel
-            </button>
-            <button type="submit" class="btn-primary">
-              Create Business Case
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <BaseSelect
+          v-model="form.lead_group_id"
+          :options="groupOptions"
+          label="Lead Group"
+        />
 
-    <!-- Edit Modal -->
-    <div v-if="showEditModal" class="modal-overlay" @click.self="closeModals">
-      <div class="modal">
-        <h2>Edit Business Case</h2>
-        <form @submit.prevent="updateCase">
-          <div class="form-group">
-            <label>Title <span class="required">*</span></label>
-            <input
-              v-model="form.title"
-              type="text"
-              required
-            />
-          </div>
+        <div class="form-row">
+          <BaseInput
+            v-model="form.estimated_cost"
+            label="Estimated Cost (USD)"
+            type="text"
+          />
+          <BaseSelect
+            v-model="form.status"
+            :options="statusOptions"
+            label="Status"
+            required
+          />
+        </div>
+      </form>
 
-          <div class="form-group">
-            <label>Description</label>
-            <textarea
-              v-model="form.description"
-              rows="4"
-            ></textarea>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Requestor <span class="required">*</span></label>
-              <input
-                v-model="form.requestor"
-                type="text"
-                required
-              />
-            </div>
-
-            <div class="form-group">
-              <label>Department <span class="required">*</span></label>
-              <input
-                v-model="form.dept"
-                type="text"
-                required
-              />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Lead Group</label>
-            <select v-model.number="form.lead_group_id">
-              <option :value="null">No lead group</option>
-              <option v-for="group in groups" :key="group.id" :value="group.id">
-                {{ group.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Estimated Cost (USD)</label>
-              <input
-                v-model.number="form.estimated_cost"
-                type="number"
-                step="0.01"
-                min="0"
-              />
-            </div>
-
-            <div class="form-group">
-              <label>Status <span class="required">*</span></label>
-              <select v-model="form.status" required>
-                <option v-for="status in statuses" :key="status" :value="status">
-                  {{ status }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="modal-actions">
-            <button type="button" @click="closeModals" class="btn-secondary">
-              Cancel
-            </button>
-            <button type="submit" class="btn-primary">
-              Save Changes
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </section>
+      <template #footer>
+        <BaseButton variant="secondary" :disabled="loading" @click="closeModals">
+          Cancel
+        </BaseButton>
+        <BaseButton variant="primary" :loading="loading" @click="updateCase">
+          Save Changes
+        </BaseButton>
+      </template>
+    </BaseModal>
+  </BaseCard>
 </template>
 
 <style scoped>
-.header-row {
+.header-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
+  justify-content: flex-end;
 }
 
 .filters {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  background-color: var(--color-background-soft);
-  border-radius: 8px;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-6);
+  padding: var(--spacing-4);
+  background: var(--color-gray-50);
+  border-radius: var(--radius-lg);
 }
 
-.filter-group {
+.loading-state {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  padding: var(--spacing-12);
 }
 
-.filter-group label {
-  font-size: 0.9rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.filter-group select,
-.filter-group input {
-  padding: 0.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background-color: white;
-  font-size: 0.9rem;
-}
-
-.filter-group input {
-  width: 200px;
-}
-
-.empty-state {
+.error-message {
+  color: var(--color-error);
+  padding: var(--spacing-4);
   text-align: center;
-  padding: 3rem;
-  color: var(--color-text-muted);
-  background-color: var(--color-background-soft);
-  border-radius: 8px;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.data-table th {
-  text-align: left;
-  padding: 0.75rem;
-  background-color: var(--color-background-soft);
-  font-weight: 600;
-  border-bottom: 2px solid var(--color-border);
-}
-
-.data-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--color-border);
-  vertical-align: middle;
-}
-
-.data-table tbody tr:hover {
-  background-color: var(--color-background-soft);
 }
 
 .description {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  margin-top: 0.25rem;
+  font-size: var(--text-sm);
+  color: var(--color-gray-500);
+  margin-top: var(--spacing-1);
   max-width: 400px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.text-muted {
-  color: var(--color-text-muted);
-}
-
 .amount {
   font-weight: 600;
-  color: #10b981;
-}
-
-.badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.badge-group {
-  background-color: var(--color-primary);
-  color: white;
-}
-
-.badge-status {
-  color: white;
+  color: var(--color-success);
 }
 
 .action-buttons {
   display: flex;
-  gap: 0.5rem;
-}
-
-.btn-primary {
-  background-color: var(--color-primary);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: background-color 0.2s;
-}
-
-.btn-primary:hover {
-  background-color: #17c653;
-}
-
-.btn-secondary {
-  background-color: var(--color-background-soft);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-  background-color: var(--color-border);
-}
-
-.btn-small {
-  padding: 0.4rem 0.75rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 500;
-  border: none;
-  transition: all 0.2s;
-}
-
-.btn-edit {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.btn-edit:hover {
-  background-color: #2563eb;
-}
-
-.btn-delete {
-  background-color: #ef4444;
-  color: white;
-}
-
-.btn-delete:hover {
-  background-color: #dc2626;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  padding: 1rem;
-}
-
-.modal {
-  background-color: white;
-  border-radius: 12px;
-  padding: 2rem;
-  max-width: 700px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-.modal h2 {
-  margin-top: 0;
-  margin-bottom: 1.5rem;
-  color: var(--color-heading);
-}
-
-.form-group {
-  margin-bottom: 1.25rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  font-size: 0.9rem;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-family: inherit;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(26, 188, 96, 0.1);
+  gap: var(--spacing-2);
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: var(--spacing-4);
 }
 
-.required {
-  color: #ef4444;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--color-border);
+@media (max-width: 640px) {
+  .filters {
+    flex-direction: column;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
