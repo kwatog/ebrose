@@ -1,6 +1,6 @@
 export function useApiFetch<T>(url: string, opts: Parameters<typeof $fetch<T>>[1] = {}) {
   const config = useRuntimeConfig()
-  const apiBase = (config as any).apiBase || config.public.apiBase
+  const apiBase = config.public.apiBase
 
   // Always include credentials so HttpOnly cookies are sent
   const baseOptions = { credentials: 'include' as const }

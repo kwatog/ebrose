@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const config = useRuntimeConfig()
-const apiBase = config.apiBase || config.public.apiBase
+const apiBase = config.public.apiBase
 const { success, error: showError } = useToast()
 
 const form = ref({

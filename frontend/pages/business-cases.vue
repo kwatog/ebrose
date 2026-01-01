@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const config = useRuntimeConfig()
-const apiBase = config.apiBase || config.public.apiBase
+const apiBase = config.public.apiBase
 const userInfo = useCookie('user_info')
 
 const decodeUserInfo = (value: string | null | object): any => {

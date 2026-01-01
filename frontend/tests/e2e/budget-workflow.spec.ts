@@ -2,17 +2,14 @@ import { test, expect } from '@playwright/test';
 
 async function loginAs(page, username, password) {
   await page.goto('/login');
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(1000); // Wait for hydration
   await page.fill('#username', username);
   await page.fill('#password', password);
   await page.click('button[type="submit"]');
-
-  try {
-    await page.waitForURL('**/', { timeout: 10000 });
-  } catch (e) {
-    await page.goto('/');
-  }
-
+  await page.waitForURL('**/', { timeout: 10000 });
   await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(1000); // Wait for dashboard to load
 }
 
 test.describe('Budget to Business Case Workflow', () => {
@@ -22,24 +19,29 @@ test.describe('Budget to Business Case Workflow', () => {
     await page.goto('/budget-items');
 
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
-    await page.click('button:has-text("Create Budget Item")');
-    await page.waitForTimeout(300);
+    // BaseButton renders with text content
+    await page.click('button:has-text("+ Create Budget Item")');
+    await page.waitForTimeout(500);
 
-    // Verify modal opened with form fields
-    await expect(page.locator('.modal-overlay')).toBeVisible();
-    await expect(page.locator('input[type="text"]').first()).toBeVisible();
-    await expect(page.locator('.modal select').first()).toBeVisible();
-    await expect(page.locator('.modal button[type="submit"]')).toBeVisible();
+    // BaseModal renders with role="dialog"
+    await expect(page.locator('[role="dialog"]')).toBeVisible();
+    // BaseInput renders as div with label
+    await expect(page.locator('label:has-text("Workday Reference")')).toBeVisible();
+    // BaseSelect has role="combobox"
+    await expect(page.locator('[role="combobox"]').first()).toBeVisible();
   });
 
   test('should navigate through dashboard quick actions', async ({ page }) => {
     await loginAs(page, 'admin', 'admin123');
     await page.goto('/');
 
-    await expect(page.locator('text=Total Budget')).toBeVisible();
+    // Dashboard stat-label contains "Total Budget"
+    await expect(page.locator('.stat-label:has-text("Total Budget")')).toBeVisible();
 
-    await page.click('a[href="/budget-items"]');
+    // Use the quick action button in the Quick Actions section
+    await page.click('.quick-action-btn:has-text("Manage Budgets")');
     await expect(page).toHaveURL('/budget-items');
   });
 
@@ -48,8 +50,13 @@ test.describe('Budget to Business Case Workflow', () => {
     await page.goto('/budget-items');
 
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
-    await page.selectOption('select', { label: '2025' });
+    // First combobox is Fiscal Year filter
+    await page.locator('[role="combobox"]').first().click();
+    await page.waitForTimeout(200);
+    // Click on the option
+    await page.locator('[role="option"]:has-text("2025")').first().click();
   });
 });
 
@@ -60,12 +67,13 @@ test.describe('Purchase Order Workflow', () => {
     await page.goto('/purchase-orders');
 
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
 
     // Button text is "+ Create PO"
     await page.click('button:has-text("+ Create PO")');
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(500);
 
-    // Verify modal opened successfully
+    // Purchase orders page uses custom modal with class="modal-overlay"
     await expect(page.locator('.modal-overlay')).toBeVisible();
   });
 });

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const config = useRuntimeConfig()
-const apiBase = config.apiBase || config.public.apiBase
+const apiBase = config.public.apiBase
 const userInfo = useCookie('user_info')
 const { success, error: showError } = useToast()
 
@@ -26,7 +26,7 @@ interface BudgetItem {
   workday_ref: string
   title: string
   description?: string
-  budget_amount: string  // Changed from number for Decimal precision
+  budget_amount: string
   currency: string
   fiscal_year: number
   owner_group_id: number
@@ -47,30 +47,48 @@ const groups = ref<UserGroup[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
-// Filter state
 const filterFiscalYear = ref<number | null>(null)
 const filterOwnerGroup = ref<number | null>(null)
 
-// Modal state
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const selectedItem = ref<BudgetItem | null>(null)
 
-// Form state
 const form = ref({
   workday_ref: '',
   title: '',
   description: '',
-  budget_amount: '',  // Changed from 0 for string-based handling
+  budget_amount: '',
   currency: 'USD',
   fiscal_year: new Date().getFullYear(),
   owner_group_id: 0
 })
 
+const currencyOptions = [
+  { value: 'USD', label: 'USD' },
+  { value: 'EUR', label: 'EUR' },
+  { value: 'GBP', label: 'GBP' }
+]
+
+const fiscalYearOptions = computed(() => {
+  const currentYear = new Date().getFullYear()
+  return Array.from({ length: 7 }, (_, i) => ({
+    value: currentYear + i - 1,
+    label: String(currentYear + i - 1)
+  }))
+})
+
+const groupOptions = computed(() => 
+  groups.value.map(g => ({ value: g.id, label: g.name }))
+)
+
 const fetchGroups = async () => {
   try {
     const res = await useApiFetch<UserGroup[]>('/user-groups')
     groups.value = res as any
+    if (groups.value.length > 0 && form.value.owner_group_id === 0) {
+      form.value.owner_group_id = groups.value[0].id
+    }
   } catch (e: any) {
     console.error('Failed to load groups:', e)
   }
@@ -105,7 +123,7 @@ const resetForm = () => {
     workday_ref: '',
     title: '',
     description: '',
-    budget_amount: '',  // Use empty string for string-based handling
+    budget_amount: '',
     currency: 'USD',
     fiscal_year: new Date().getFullYear(),
     owner_group_id: groups.value[0]?.id || 0
@@ -215,6 +233,17 @@ const formatCurrency = (amount: string | number, currency: string) => {
   }).format(num)
 }
 
+const tableColumns = [
+  { key: 'workday_ref', label: 'Workday Ref', sortable: true },
+  { key: 'title', label: 'Title', sortable: true },
+  { key: 'budget_amount', label: 'Budget Amount', sortable: true, align: 'right' as const },
+  { key: 'fiscal_year', label: 'Fiscal Year', sortable: true, align: 'center' as const },
+  { key: 'owner_group', label: 'Owner Group', sortable: false },
+  { key: 'actions', label: 'Actions', sortable: false }
+]
+
+const getGroupName = (id: number) => groups.value.find(g => g.id === id)?.name || 'Unknown'
+
 onMounted(async () => {
   await fetchGroups()
   await fetchItems()
@@ -222,500 +251,277 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="card">
-    <div class="header-row">
-      <div>
-        <h1 class="card-title">Budget Items</h1>
-        <p class="card-sub">Manage budget allocations from Workday</p>
+  <BaseCard title="Budget Items" subtitle="Manage budget allocations from Workday">
+    <template #header>
+      <div class="header-actions">
+        <BaseButton variant="primary" @click="openCreateModal">
+          + Create Budget Item
+        </BaseButton>
       </div>
-      <button @click="openCreateModal" class="btn-primary">
-        + Create Budget Item
-      </button>
-    </div>
+    </template>
 
-    <!-- Filters -->
     <div class="filters">
-      <div class="filter-group">
-        <label>Fiscal Year:</label>
-        <select v-model="filterFiscalYear" @change="fetchItems">
-          <option :value="null">All Years</option>
-          <option :value="2024">2024</option>
-          <option :value="2025">2025</option>
-          <option :value="2026">2026</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Owner Group:</label>
-        <select v-model="filterOwnerGroup" @change="fetchItems">
-          <option :value="null">All Groups</option>
-          <option v-for="group in groups" :key="group.id" :value="group.id">
-            {{ group.name }}
-          </option>
-        </select>
-      </div>
+      <BaseSelect
+        v-model="filterFiscalYear"
+        :options="[{ value: null, label: 'All Years' }, ...fiscalYearOptions]"
+        label="Fiscal Year"
+        @change="fetchItems"
+      />
+      <BaseSelect
+        v-model="filterOwnerGroup"
+        :options="[{ value: null, label: 'All Groups' }, ...groupOptions]"
+        label="Owner Group"
+        @change="fetchItems"
+      />
     </div>
 
-    <p v-if="loading">Loading…</p>
-    <p v-else-if="error" style="color: #cc0000;">{{ error }}</p>
-    <div v-else-if="items.length === 0" class="empty-state">
-      No budget items found. Click "Create Budget Item" to add one.
-    </div>
-    <table v-else class="data-table">
-      <thead>
-        <tr>
-          <th>Workday Ref</th>
-          <th>Title</th>
-          <th>Budget Amount</th>
-          <th>Fiscal Year</th>
-          <th>Owner Group</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="item in items" :key="item.id">
-          <td><code>{{ item.workday_ref }}</code></td>
-          <td>
-            <strong>{{ item.title }}</strong>
-            <div v-if="item.description" class="description">{{ item.description }}</div>
-          </td>
-          <td>{{ formatCurrency(item.budget_amount, item.currency) }}</td>
-          <td>{{ item.fiscal_year }}</td>
-          <td>
-            <span class="badge">
-              {{ groups.find(g => g.id === item.owner_group_id)?.name || 'Unknown' }}
-            </span>
-          </td>
-          <td>
-            <div class="action-buttons">
-              <button
-                v-if="canEdit(item)"
-                @click="openEditModal(item)"
-                class="btn-small btn-edit"
-                title="Edit"
-              >
-                ✏️ Edit
-              </button>
-              <button
-                v-if="canDelete()"
-                @click="deleteItem(item)"
-                class="btn-small btn-delete"
-                title="Delete"
-              >
-                🗑️ Delete
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <!-- Create Modal -->
-    <div v-if="showCreateModal" class="modal-overlay" @click.self="closeModals">
-      <div class="modal">
-        <h2>Create Budget Item</h2>
-        <form @submit.prevent="createItem">
-          <div class="form-group">
-            <label>Workday Reference <span class="required">*</span></label>
-            <input
-              v-model="form.workday_ref"
-              type="text"
-              placeholder="e.g., WD-2025-FIN-001"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label>Title <span class="required">*</span></label>
-            <input
-              v-model="form.title"
-              type="text"
-              placeholder="e.g., Cloud Infrastructure Budget 2025"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label>Description</label>
-            <textarea
-              v-model="form.description"
-              rows="3"
-              placeholder="Optional description"
-            ></textarea>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Budget Amount <span class="required">*</span></label>
-              <input
-                v-model="form.budget_amount"
-                type="text"
-                step="0.01"
-                min="0"
-                required
-              />
-            </div>
-
-            <div class="form-group">
-              <label>Currency <span class="required">*</span></label>
-              <select v-model="form.currency" required>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Fiscal Year <span class="required">*</span></label>
-            <input
-              v-model.number="form.fiscal_year"
-              type="text"
-              min="2020"
-              max="2030"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label>Owner Group <span class="required">*</span></label>
-            <select v-model.number="form.owner_group_id" required>
-              <option v-for="group in groups" :key="group.id" :value="group.id">
-                {{ group.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="modal-actions">
-            <button type="button" @click="closeModals" class="btn-secondary" :disabled="loading">
-              Cancel
-            </button>
-            <button type="submit" class="btn-primary" :disabled="loading">
-              {{ loading ? 'Creating...' : 'Create Budget Item' }}
-            </button>
-          </div>
-        </form>
-      </div>
+    <div v-if="loading" class="loading-state">
+      <LoadingSpinner size="lg" label="Loading budget items..." />
     </div>
 
-    <!-- Edit Modal -->
-    <div v-if="showEditModal" class="modal-overlay" @click.self="closeModals">
-      <div class="modal">
-        <h2>Edit Budget Item</h2>
-        <form @submit.prevent="updateItem">
-          <div class="form-group">
-            <label>Workday Reference</label>
-            <input
-              v-model="form.workday_ref"
-              type="text"
-              disabled
-              class="disabled-input"
-            />
-            <small>Workday reference cannot be changed</small>
-          </div>
+    <p v-else-if="error" class="error-message">{{ error }}</p>
 
-          <div class="form-group">
-            <label>Title <span class="required">*</span></label>
-            <input
-              v-model="form.title"
-              type="text"
-              required
-            />
-          </div>
+    <EmptyState
+      v-else-if="items.length === 0"
+      title="No budget items found"
+      description="Click 'Create Budget Item' to add your first budget."
+      action-text="Create Budget Item"
+      @action="openCreateModal"
+    />
 
-          <div class="form-group">
-            <label>Description</label>
-            <textarea
-              v-model="form.description"
-              rows="3"
-            ></textarea>
-          </div>
+    <BaseTable
+      v-else
+      :columns="tableColumns"
+      :data="items"
+      :loading="loading"
+      selectable
+      sticky-header
+      empty-message="No budget items found"
+      @row-click="openEditModal"
+    >
+      <template #cell-workday_ref="{ value }">
+        <code class="ref-code">{{ value }}</code>
+      </template>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label>Budget Amount <span class="required">*</span></label>
-              <input
-                v-model="form.budget_amount"
-                type="text"
-                step="0.01"
-                min="0"
-                required
-              />
-            </div>
+      <template #cell-title="{ row, value }">
+        <div>
+          <strong>{{ value }}</strong>
+          <div v-if="row.description" class="description">{{ row.description }}</div>
+        </div>
+      </template>
 
-            <div class="form-group">
-              <label>Currency <span class="required">*</span></label>
-              <select v-model="form.currency" required>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-              </select>
-            </div>
-          </div>
+      <template #cell-budget_amount="{ value, row }">
+        {{ formatCurrency(value, row.currency) }}
+      </template>
 
-          <div class="form-group">
-            <label>Fiscal Year <span class="required">*</span></label>
-            <input
-              v-model.number="form.fiscal_year"
-              type="text"
-              min="2020"
-              max="2030"
-              required
-            />
-          </div>
+      <template #cell-fiscal_year="{ value }">
+        <BaseBadge variant="secondary" size="sm">{{ value }}</BaseBadge>
+      </template>
 
-          <div class="modal-actions">
-            <button type="button" @click="closeModals" class="btn-secondary" :disabled="loading">
-              Cancel
-            </button>
-            <button type="submit" class="btn-primary" :disabled="loading">
-              {{ loading ? 'Saving...' : 'Save Changes' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </section>
+      <template #cell-owner_group="{ row }">
+        <BaseBadge variant="primary" size="sm">{{ getGroupName(row.owner_group_id) }}</BaseBadge>
+      </template>
+
+      <template #cell-actions="{ row }">
+        <div class="action-buttons" v-if="canEdit(row) || canDelete()">
+          <BaseButton
+            v-if="canEdit(row)"
+            size="sm"
+            variant="secondary"
+            @click="openEditModal(row)"
+          >
+            Edit
+          </BaseButton>
+          <BaseButton
+            v-if="canDelete()"
+            size="sm"
+            variant="danger"
+            @click="deleteItem(row)"
+          >
+            Delete
+          </BaseButton>
+        </div>
+      </template>
+    </BaseTable>
+
+    <BaseModal v-model="showCreateModal" title="Create Budget Item" size="lg">
+      <form @submit.prevent="createItem">
+        <BaseInput
+          v-model="form.workday_ref"
+          label="Workday Reference"
+          placeholder="e.g., WD-2025-FIN-001"
+          required
+        />
+
+        <BaseInput
+          v-model="form.title"
+          label="Title"
+          placeholder="e.g., Cloud Infrastructure Budget 2025"
+          required
+        />
+
+        <BaseTextarea
+          v-model="form.description"
+          label="Description"
+          placeholder="Optional description"
+          rows="3"
+        />
+
+        <div class="form-row">
+          <BaseInput
+            v-model="form.budget_amount"
+            label="Budget Amount"
+            placeholder="0.00"
+            required
+          />
+          <BaseSelect
+            v-model="form.currency"
+            :options="currencyOptions"
+            label="Currency"
+            required
+          />
+        </div>
+
+        <div class="form-row">
+          <BaseInput
+            v-model.number="form.fiscal_year"
+            label="Fiscal Year"
+            type="number"
+            required
+          />
+          <BaseSelect
+            v-model="form.owner_group_id"
+            :options="groupOptions"
+            label="Owner Group"
+            required
+          />
+        </div>
+      </form>
+
+      <template #footer>
+        <BaseButton variant="secondary" :disabled="loading" @click="closeModals">
+          Cancel
+        </BaseButton>
+        <BaseButton variant="primary" :loading="loading" @click="createItem">
+          Create Budget Item
+        </BaseButton>
+      </template>
+    </BaseModal>
+
+    <BaseModal v-model="showEditModal" title="Edit Budget Item" size="lg">
+      <form @submit.prevent="updateItem">
+        <BaseInput
+          v-model="form.workday_ref"
+          label="Workday Reference"
+          disabled
+          help-text="Workday reference cannot be changed"
+        />
+
+        <BaseInput
+          v-model="form.title"
+          label="Title"
+          required
+        />
+
+        <BaseTextarea
+          v-model="form.description"
+          label="Description"
+          rows="3"
+        />
+
+        <div class="form-row">
+          <BaseInput
+            v-model="form.budget_amount"
+            label="Budget Amount"
+            required
+          />
+          <BaseSelect
+            v-model="form.currency"
+            :options="currencyOptions"
+            label="Currency"
+            required
+          />
+        </div>
+
+        <BaseInput
+          v-model.number="form.fiscal_year"
+          label="Fiscal Year"
+          type="number"
+          required
+        />
+      </form>
+
+      <template #footer>
+        <BaseButton variant="secondary" :disabled="loading" @click="closeModals">
+          Cancel
+        </BaseButton>
+        <BaseButton variant="primary" :loading="loading" @click="updateItem">
+          Save Changes
+        </BaseButton>
+      </template>
+    </BaseModal>
+  </BaseCard>
 </template>
 
 <style scoped>
-.header-row {
+.header-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
+  justify-content: flex-end;
 }
 
 .filters {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  background-color: var(--color-background-soft);
-  border-radius: 8px;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-6);
+  padding: var(--spacing-4);
+  background: var(--color-gray-50);
+  border-radius: var(--radius-lg);
 }
 
-.filter-group {
+.loading-state {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  padding: var(--spacing-12);
 }
 
-.filter-group label {
-  font-size: 0.9rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.filter-group select {
-  padding: 0.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background-color: white;
-  font-size: 0.9rem;
-}
-
-.empty-state {
+.error-message {
+  color: var(--color-error);
+  padding: var(--spacing-4);
   text-align: center;
-  padding: 3rem;
-  color: var(--color-text-muted);
-  background-color: var(--color-background-soft);
-  border-radius: 8px;
 }
 
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.data-table th {
-  text-align: left;
-  padding: 0.75rem;
-  background-color: var(--color-background-soft);
-  font-weight: 600;
-  border-bottom: 2px solid var(--color-border);
-}
-
-.data-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--color-border);
-  vertical-align: middle;
-}
-
-.data-table tbody tr:hover {
-  background-color: var(--color-background-soft);
+.ref-code {
+  font-family: monospace;
+  background: var(--color-gray-100);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
 }
 
 .description {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  margin-top: 0.25rem;
-}
-
-.badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  background-color: var(--color-primary);
-  color: white;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--color-gray-500);
+  margin-top: var(--spacing-1);
 }
 
 .action-buttons {
   display: flex;
-  gap: 0.5rem;
-}
-
-.btn-primary {
-  background-color: var(--color-primary);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: background-color 0.2s;
-}
-
-.btn-primary:hover {
-  background-color: #17c653;
-}
-
-.btn-secondary {
-  background-color: var(--color-background-soft);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-  background-color: var(--color-border);
-}
-
-.btn-small {
-  padding: 0.4rem 0.75rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 500;
-  border: none;
-  transition: all 0.2s;
-}
-
-.btn-edit {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.btn-edit:hover {
-  background-color: #2563eb;
-}
-
-.btn-delete {
-  background-color: #ef4444;
-  color: white;
-}
-
-.btn-delete:hover {
-  background-color: #dc2626;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  padding: 1rem;
-}
-
-.modal {
-  background-color: white;
-  border-radius: 12px;
-  padding: 2rem;
-  max-width: 600px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-.modal h2 {
-  margin-top: 0;
-  margin-bottom: 1.5rem;
-  color: var(--color-heading);
-}
-
-.form-group {
-  margin-bottom: 1.25rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  font-size: 0.9rem;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-family: inherit;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(26, 188, 96, 0.1);
-}
-
-.disabled-input {
-  background-color: var(--color-background-soft);
-  cursor: not-allowed;
-}
-
-.form-group small {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
+  gap: var(--spacing-2);
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: var(--spacing-4);
 }
 
-.required {
-  color: #ef4444;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--color-border);
+@media (max-width: 640px) {
+  .filters {
+    flex-direction: column;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -14,7 +14,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const config = useRuntimeConfig()
-const apiBase = config.apiBase || config.public.apiBase
+const apiBase = config.public.apiBase
 const token = useCookie('access_token')
 
 interface RecordAccess {
