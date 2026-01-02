@@ -160,4 +160,26 @@ test.describe('Application Screenshots', () => {
     }
     await page.screenshot({ path: 'screenshots/11b-goods-receipts-create-modal.png', fullPage: true });
   });
+
+  test('12-profile-page', async ({ page }) => {
+    await loginAs(page, 'admin', 'admin123');
+    await page.goto('/profile');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: 'screenshots/12-profile-page.png', fullPage: true });
+  });
+
+  test('13-password-change-form', async ({ page }) => {
+    await loginAs(page, 'admin', 'admin123');
+    await page.goto('/profile');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    // Scroll to password change section if exists
+    const passwordSection = page.locator('text=Change Password').first();
+    if (await passwordSection.count() > 0) {
+      await passwordSection.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(500);
+    }
+    await page.screenshot({ path: 'screenshots/13-password-change-form.png', fullPage: true });
+  });
 });

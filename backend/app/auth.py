@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 from .database import SessionLocal
 from . import models
 
-def now_utc() -> str:
-    """Get current UTC timestamp as ISO string."""
-    return datetime.now(timezone.utc).isoformat()
+def now_utc() -> datetime:
+    """Get current UTC timestamp as timezone-aware datetime."""
+    return datetime.now(timezone.utc)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:

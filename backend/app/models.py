@@ -21,8 +21,8 @@ class User(Base):
     department = Column(String(255))
     role = Column(String(50), default="User")  # Viewer, User, Manager, Admin
     is_active = Column(Boolean, default=True)
-    created_at = Column(String(32))
-    last_login = Column(String(32), nullable=True)
+    created_at = Column(DateTime(timezone=True))
+    last_login = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships for audit
     # Note: We are not adding back_populates on the User side for every single entity 
@@ -36,7 +36,7 @@ class UserGroup(Base):
     name = Column(String(255), unique=True, nullable=False)
     description = Column(Text)
     created_by = Column(Integer, ForeignKey("user.id"))
-    created_at = Column(String(32))
+    created_at = Column(DateTime(timezone=True))
 
 
 class UserGroupMembership(Base):
@@ -46,7 +46,7 @@ class UserGroupMembership(Base):
     user_id = Column(Integer, ForeignKey("user.id"))
     group_id = Column(Integer, ForeignKey("user_group.id"))
     added_by = Column(Integer, ForeignKey("user.id"))
-    added_at = Column(String(32))
+    added_at = Column(DateTime(timezone=True))
 
 
 class RecordAccess(Base):
@@ -59,10 +59,10 @@ class RecordAccess(Base):
     group_id = Column(Integer, ForeignKey("user_group.id"), nullable=True)
     access_level = Column(String(20), nullable=False)  # Read, Write, Full
     granted_by = Column(Integer, ForeignKey("user.id"))
-    granted_at = Column(String(32))
-    expires_at = Column(String(32), nullable=True)
+    granted_at = Column(DateTime(timezone=True))
+    expires_at = Column(DateTime(timezone=True), nullable=True)
     updated_by = Column(Integer, ForeignKey("user.id"), nullable=True)
-    updated_at = Column(String(32), nullable=True)
+    updated_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class AuditLog(Base):
@@ -75,7 +75,7 @@ class AuditLog(Base):
     old_values = Column(Text, nullable=True)
     new_values = Column(Text, nullable=True)
     user_id = Column(Integer, ForeignKey("user.id"))
-    timestamp = Column(String(32), nullable=False)
+    timestamp = Column(DateTime(timezone=True), nullable=False)
     ip_address = Column(String(50), nullable=True)
     user_agent = Column(Text, nullable=True)
 
@@ -95,8 +95,8 @@ class BudgetItem(Base):
     # Audit
     created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
-    created_at = Column(String(32))
-    updated_at = Column(String(32), nullable=True)
+    created_at = Column(DateTime(timezone=True))
+    updated_at = Column(DateTime(timezone=True), nullable=True)
 
     line_items = relationship("BusinessCaseLineItem", back_populates="budget_item")
 
@@ -116,8 +116,8 @@ class BusinessCase(Base):
     # Audit
     created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
-    created_at = Column(String(32))
-    updated_at = Column(String(32), nullable=True)
+    created_at = Column(DateTime(timezone=True))
+    updated_at = Column(DateTime(timezone=True), nullable=True)
 
     line_items = relationship("BusinessCaseLineItem", back_populates="business_case")
 
@@ -134,14 +134,14 @@ class BusinessCaseLineItem(Base):
     spend_category = Column(String(20), nullable=False)  # CAPEX, OPEX
     requested_amount = Column(Numeric(10, 2), nullable=False)
     currency = Column(String(10), nullable=False)
-    planned_commit_date = Column(String(32))
+    planned_commit_date = Column(DateTime(timezone=True))
     status = Column(String(50), index=True)
 
     # Audit
     created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
-    created_at = Column(String(32))
-    updated_at = Column(String(32), nullable=True)
+    created_at = Column(DateTime(timezone=True))
+    updated_at = Column(DateTime(timezone=True), nullable=True)
 
     business_case = relationship("BusinessCase", back_populates="line_items")
     budget_item = relationship("BudgetItem", back_populates="line_items")
@@ -161,8 +161,8 @@ class WBS(Base):
     # Audit
     created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
-    created_at = Column(String(32))
-    updated_at = Column(String(32), nullable=True)
+    created_at = Column(DateTime(timezone=True))
+    updated_at = Column(DateTime(timezone=True), nullable=True)
 
     line_item = relationship("BusinessCaseLineItem", back_populates="wbs_items")
     assets = relationship("Asset", back_populates="wbs")
@@ -188,8 +188,8 @@ class Asset(Base):
     # Audit
     created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
-    created_at = Column(String(32))
-    updated_at = Column(String(32), nullable=True)
+    created_at = Column(DateTime(timezone=True))
+    updated_at = Column(DateTime(timezone=True), nullable=True)
 
     wbs = relationship("WBS", back_populates="assets")
     purchase_orders = relationship("PurchaseOrder", back_populates="asset")
@@ -204,21 +204,21 @@ class PurchaseOrder(Base):
     ariba_pr_number = Column(String(255))
     supplier = Column(String(255))
     po_type = Column(String(50))
-    start_date = Column(String(32))
-    end_date = Column(String(32))
+    start_date = Column(DateTime(timezone=True))
+    end_date = Column(DateTime(timezone=True))
     total_amount = Column(Numeric(10, 2))
     currency = Column(String(10), default="USD")
     spend_category = Column(String(20), nullable=False)  # CAPEX, OPEX
-    planned_commit_date = Column(String(32))
-    actual_commit_date = Column(String(32))
+    planned_commit_date = Column(DateTime(timezone=True))
+    actual_commit_date = Column(DateTime(timezone=True))
     owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False, index=True)
     status = Column(String(50), index=True)
 
     # Audit
     created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
-    created_at = Column(String(32))
-    updated_at = Column(String(32), nullable=True)
+    created_at = Column(DateTime(timezone=True))
+    updated_at = Column(DateTime(timezone=True), nullable=True)
 
     asset = relationship("Asset", back_populates="purchase_orders")
     goods_receipts = relationship("GoodsReceipt", back_populates="po")
@@ -231,7 +231,7 @@ class GoodsReceipt(Base):
     id = Column(Integer, primary_key=True, index=True)
     po_id = Column(Integer, ForeignKey("purchase_order.id"), nullable=False)
     gr_number = Column(String(255), unique=True, index=True)
-    gr_date = Column(String(32))
+    gr_date = Column(DateTime(timezone=True))
     amount = Column(Numeric(10, 2))
     description = Column(Text)
     owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False, index=True)
@@ -239,8 +239,8 @@ class GoodsReceipt(Base):
     # Audit
     created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
-    created_at = Column(String(32))
-    updated_at = Column(String(32), nullable=True)
+    created_at = Column(DateTime(timezone=True))
+    updated_at = Column(DateTime(timezone=True), nullable=True)
 
     po = relationship("PurchaseOrder", back_populates="goods_receipts")
 
@@ -252,8 +252,8 @@ class Resource(Base):
     name = Column(String(255))
     vendor = Column(String(255))
     role = Column(String(255))
-    start_date = Column(String(32))
-    end_date = Column(String(32))
+    start_date = Column(DateTime(timezone=True))
+    end_date = Column(DateTime(timezone=True))
     cost_per_month = Column(Numeric(10, 2))
     owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False, index=True)
     status = Column(String(50), index=True)
@@ -261,8 +261,8 @@ class Resource(Base):
     # Audit
     created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
-    created_at = Column(String(32))
-    updated_at = Column(String(32), nullable=True)
+    created_at = Column(DateTime(timezone=True))
+    updated_at = Column(DateTime(timezone=True), nullable=True)
 
     allocations = relationship("ResourcePOAllocation", back_populates="resource")
 
@@ -273,16 +273,16 @@ class ResourcePOAllocation(Base):
     id = Column(Integer, primary_key=True, index=True)
     resource_id = Column(Integer, ForeignKey("resource.id"))
     po_id = Column(Integer, ForeignKey("purchase_order.id"))
-    allocation_start = Column(String(32))
-    allocation_end = Column(String(32))
+    allocation_start = Column(DateTime(timezone=True))
+    allocation_end = Column(DateTime(timezone=True))
     expected_monthly_burn = Column(Numeric(10, 2))
     owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False, index=True)
 
     # Audit
     created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
-    created_at = Column(String(32))
-    updated_at = Column(String(32), nullable=True)
+    created_at = Column(DateTime(timezone=True))
+    updated_at = Column(DateTime(timezone=True), nullable=True)
 
     resource = relationship("Resource", back_populates="allocations")
     po = relationship("PurchaseOrder", back_populates="allocations")

@@ -25,8 +25,8 @@ class UserUpdate(BaseModel):
 
 class User(UserBase):
     id: int
-    created_at: Optional[str] = None
-    last_login: Optional[str] = None
+    created_at: Optional[datetime] = None
+    last_login: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -63,8 +63,8 @@ class UserGroupUpdate(BaseModel):
 class UserGroup(UserGroupBase):
     id: int
     created_by: Optional[int] = None
-    created_at: Optional[str] = None
-    
+    created_at: Optional[datetime] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -78,7 +78,7 @@ class UserGroupMembershipCreate(UserGroupMembershipBase):
 class UserGroupMembership(UserGroupMembershipBase):
     id: int
     added_by: Optional[int] = None
-    added_at: Optional[str] = None
+    added_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -88,21 +88,21 @@ class RecordAccessBase(BaseModel):
     user_id: Optional[int] = None
     group_id: Optional[int] = None
     access_level: str
-    expires_at: Optional[str] = None
+    expires_at: Optional[datetime] = None
 
 class RecordAccessCreate(RecordAccessBase):
     pass
 
 class RecordAccessUpdate(BaseModel):
     access_level: Optional[str] = None
-    expires_at: Optional[str] = None
+    expires_at: Optional[datetime] = None
 
 class RecordAccess(RecordAccessBase):
     id: int
     granted_by: Optional[int] = None
-    granted_at: Optional[str] = None
+    granted_at: Optional[datetime] = None
     updated_by: Optional[int] = None
-    updated_at: Optional[str] = None
+    updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -113,7 +113,7 @@ class AuditLogBase(BaseModel):
     old_values: Optional[str] = None
     new_values: Optional[str] = None
     user_id: Optional[int] = None
-    timestamp: str
+    timestamp: datetime
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
 
@@ -126,8 +126,8 @@ class AuditLog(AuditLogBase):
 class AuditMixin(BaseModel):
     created_by: Optional[int] = None
     updated_by: Optional[int] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 
 # --- BudgetItem ---
@@ -233,7 +233,7 @@ class BusinessCaseLineItemBase(BaseModel):
         if isinstance(v, float):
             return Decimal(str(v)).quantize(Decimal('0.01'))
         return Decimal(str(v)).quantize(Decimal('0.01'))
-    planned_commit_date: Optional[str] = None
+    planned_commit_date: Optional[datetime] = None
     status: Optional[str] = "Draft"
 
 class BusinessCaseLineItemCreate(BusinessCaseLineItemBase):
@@ -245,7 +245,7 @@ class BusinessCaseLineItemUpdate(BaseModel):
     spend_category: Optional[str] = None
     requested_amount: Optional[Decimal] = None
     currency: Optional[str] = None
-    planned_commit_date: Optional[str] = None
+    planned_commit_date: Optional[datetime] = None
     status: Optional[str] = None
 
     @field_validator('requested_amount', mode='before')
@@ -258,6 +258,7 @@ class BusinessCaseLineItemUpdate(BaseModel):
         return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class BusinessCaseLineItem(BusinessCaseLineItemBase, AuditMixin):
+    id: int
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -312,13 +313,13 @@ class PurchaseOrderBase(BaseModel):
     ariba_pr_number: Optional[str] = None
     supplier: Optional[str] = None
     po_type: Optional[str] = None
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
     total_amount: Optional[Decimal] = None
     currency: str = "USD"
     spend_category: str  # CAPEX or OPEX
-    planned_commit_date: Optional[str] = None
-    actual_commit_date: Optional[str] = None
+    planned_commit_date: Optional[datetime] = None
+    actual_commit_date: Optional[datetime] = None
     owner_group_id: int
     status: Optional[str] = "Open"
 
@@ -338,13 +339,13 @@ class PurchaseOrderUpdate(BaseModel):
     ariba_pr_number: Optional[str] = None
     supplier: Optional[str] = None
     po_type: Optional[str] = None
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
     total_amount: Optional[Decimal] = None
     currency: Optional[str] = None
     spend_category: Optional[str] = None
-    planned_commit_date: Optional[str] = None
-    actual_commit_date: Optional[str] = None
+    planned_commit_date: Optional[datetime] = None
+    actual_commit_date: Optional[datetime] = None
     status: Optional[str] = None
 
     @field_validator('total_amount', mode='before')
@@ -365,7 +366,7 @@ class PurchaseOrder(PurchaseOrderBase, AuditMixin):
 class GoodsReceiptBase(BaseModel):
     po_id: int
     gr_number: str
-    gr_date: Optional[str] = None
+    gr_date: Optional[datetime] = None
     amount: Decimal
     description: Optional[str] = None
     owner_group_id: int
@@ -381,7 +382,7 @@ class GoodsReceiptCreate(GoodsReceiptBase):
     pass
 
 class GoodsReceiptUpdate(BaseModel):
-    gr_date: Optional[str] = None
+    gr_date: Optional[datetime] = None
     amount: Optional[Decimal] = None
     description: Optional[str] = None
 
@@ -404,8 +405,8 @@ class ResourceBase(BaseModel):
     name: str
     vendor: Optional[str] = None
     role: Optional[str] = None
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
     cost_per_month: Optional[Decimal] = None
     owner_group_id: int
     status: Optional[str] = "Active"
@@ -426,8 +427,8 @@ class ResourceUpdate(BaseModel):
     name: Optional[str] = None
     vendor: Optional[str] = None
     role: Optional[str] = None
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
     cost_per_month: Optional[Decimal] = None
     status: Optional[str] = None
 
@@ -449,8 +450,8 @@ class Resource(ResourceBase, AuditMixin):
 class ResourcePOAllocationBase(BaseModel):
     resource_id: int
     po_id: int
-    allocation_start: Optional[str] = None
-    allocation_end: Optional[str] = None
+    allocation_start: Optional[datetime] = None
+    allocation_end: Optional[datetime] = None
     expected_monthly_burn: Optional[Decimal] = None
     owner_group_id: int
 
@@ -467,8 +468,8 @@ class ResourcePOAllocationCreate(ResourcePOAllocationBase):
     pass
 
 class ResourcePOAllocationUpdate(BaseModel):
-    allocation_start: Optional[str] = None
-    allocation_end: Optional[str] = None
+    allocation_start: Optional[datetime] = None
+    allocation_end: Optional[datetime] = None
     expected_monthly_burn: Optional[Decimal] = None
 
     @field_validator('expected_monthly_burn', mode='before')

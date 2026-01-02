@@ -65,8 +65,9 @@ def get_alerts(
     current_user: models.User = Depends(get_current_user)
 ):
     alerts = []
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    current_month = datetime.now().strftime("%Y-%m")
+    today = datetime.now().date()
+    current_month = datetime.now().month
+    current_year = datetime.now().year
 
     pos = db.query(models.PurchaseOrder).all()
     

@@ -170,3 +170,141 @@ def test_password_policy_enforcement_on_register(client, admin_user, admin_token
     # Verify user was not created
     user = db_session.query(User).filter(User.username == "newuser").first()
     assert user is None
+
+
+def test_password_change_works_with_new_password(client, regular_user, user_token):
+    """Test that password change works and new password can be used for login."""
+    from app.auth import get_password_hash
+
+    new_password = "SecurePass456!"
+    current_hashed = regular_user.hashed_password
+
+    # Change password
+    response = client.post(
+        "/auth/password",
+        json={
+            "current_password": "testpass123",
+            "new_password": new_password
+        },
+        cookies={"access_token": user_token}
+    )
+    assert response.status_code == 200
+    assert response.json()["message"] == "Password changed successfully"
+
+    # Verify old password no longer works
+    login_response = client.post(
+        "/auth/login",
+        data={"username": "testuser", "password": "testpass123"}
+    )
+    assert login_response.status_code == 401
+
+    # Verify new password works
+    login_response = client.post(
+        "/auth/login",
+        data={"username": "testuser", "password": new_password}
+    )
+    assert login_response.status_code == 200
+
+
+def test_password_change_rejects_missing_uppercase(client, regular_user, user_token):
+    """Test password change rejects password without uppercase."""
+    response = client.post(
+        "/auth/password",
+        json={
+            "current_password": "testpass123",
+            "new_password": "lowercase123!"
+        },
+        cookies={"access_token": user_token}
+    )
+    assert response.status_code == 400
+    assert "uppercase" in response.json()["detail"].lower()
+
+
+def test_password_change_rejects_missing_lowercase(client, regular_user, user_token):
+    """Test password change rejects password without lowercase."""
+    response = client.post(
+        "/auth/password",
+        json={
+            "current_password": "testpass123",
+            "new_password": "UPPERCASE123!"
+        },
+        cookies={"access_token": user_token}
+    )
+    assert response.status_code == 400
+    assert "lowercase" in response.json()["detail"].lower()
+
+
+def test_password_change_rejects_missing_digit(client, regular_user, user_token):
+    """Test password change rejects password without digit."""
+    response = client.post(
+        "/auth/password",
+        json={
+            "current_password": "testpass123",
+            "new_password": "NoDigitsHere!"
+        },
+        cookies={"access_token": user_token}
+    )
+    assert response.status_code == 400
+    assert "digit" in response.json()["detail"].lower()
+
+
+def test_password_change_rejects_missing_special(client, regular_user, user_token):
+    """Test password change rejects password without special character."""
+    response = client.post(
+        "/auth/password",
+        json={
+            "current_password": "testpass123",
+            "new_password": "NoSpecial123"
+        },
+        cookies={"access_token": user_token}
+    )
+    assert response.status_code == 400
+    assert "special" in response.json()["detail"].lower()
+
+
+def test_update_me_with_empty_values(client, regular_user, user_token):
+    """Test updating user profile with empty string values."""
+    response = client.put(
+        "/auth/me",
+        json={"full_name": "", "department": ""},
+        cookies={"access_token": user_token}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["full_name"] == ""
+    assert data["department"] == ""
+
+
+def test_update_me_response_includes_all_fields(client, regular_user, user_token):
+    """Test that profile response includes all expected fields."""
+    response = client.put(
+        "/auth/me",
+        json={"full_name": "Test User", "department": "Engineering"},
+        cookies={"access_token": user_token}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Verify all expected fields are present
+    assert "id" in data
+    assert "username" in data
+    assert "email" in data
+    assert "full_name" in data
+    assert "department" in data
+    assert "role" in data
+    assert "is_active" in data
+    assert "created_at" in data
+    assert "last_login" in data
+
+
+def test_password_change_same_as_current_fails(client, regular_user, user_token):
+    """Test that password change fails if new password is same as current."""
+    response = client.post(
+        "/auth/password",
+        json={
+            "current_password": "testpass123",
+            "new_password": "testpass123"
+        },
+        cookies={"access_token": user_token}
+    )
+    assert response.status_code == 400
