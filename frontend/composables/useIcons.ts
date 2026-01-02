@@ -32,6 +32,12 @@ import {
   ChevronUpIcon,
   Bars3Icon,
   XMarkIcon,
+  BanknotesIcon,
+  ChartPieIcon,
+  DocumentIcon,
+  CreditCardIcon,
+  ReceiptRefundIcon,
+  ClipboardIcon,
 } from '@heroicons/vue/24/outline'
 
 import {
@@ -76,6 +82,13 @@ export type IconName =
   | 'chevron-up'
   | 'menu'
   | 'close'
+  // Dashboard
+  | 'budget'
+  | 'spending'
+  | 'document'
+  | 'team'
+  | 'receipt'
+  | 'analytics'
 
 export const useIcons = () => {
   const icons = {
@@ -117,6 +130,14 @@ export const useIcons = () => {
     'chevron-up': ChevronUpIcon,
     menu: Bars3Icon,
     close: XMarkIcon,
+
+    // Dashboard
+    budget: BanknotesIcon,
+    spending: ChartPieIcon,
+    document: DocumentIcon,
+    team: UsersIcon,
+    receipt: ReceiptRefundIcon,
+    analytics: ChartBarIcon,
   }
 
   const solidIcons = {

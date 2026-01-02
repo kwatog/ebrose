@@ -1,4 +1,14 @@
 <script setup lang="ts">
+import {
+  BanknotesIcon,
+  ChartPieIcon,
+  DocumentIcon,
+  UsersIcon,
+  ClipboardIcon,
+  ChartBarIcon,
+  CubeIcon,
+} from '@heroicons/vue/24/outline'
+
 const userCookie = useCookie('user_info')
 const user = computed(() => userCookie.value)
 
@@ -149,7 +159,7 @@ const isManager = computed(() => {
         <BaseCard padding="md" class="stat-card">
           <div class="stat-card-content">
             <div class="stat-icon stat-icon-primary">
-              <span>💰</span>
+              <BanknotesIcon class="stat-icon-svg" />
             </div>
             <div class="stat-details">
               <div class="stat-label">Total Budget</div>
@@ -163,7 +173,7 @@ const isManager = computed(() => {
         <BaseCard padding="md" class="stat-card">
           <div class="stat-card-content">
             <div class="stat-icon stat-icon-warning">
-              <span>📊</span>
+              <ChartPieIcon class="stat-icon-svg" />
             </div>
             <div class="stat-details">
               <div class="stat-label">Total Spend</div>
@@ -179,7 +189,7 @@ const isManager = computed(() => {
         <BaseCard padding="md" class="stat-card">
           <div class="stat-card-content">
             <div class="stat-icon stat-icon-info">
-              <span>📄</span>
+              <DocumentIcon class="stat-icon-svg" />
             </div>
             <div class="stat-details">
               <div class="stat-label">Open Purchase Orders</div>
@@ -193,7 +203,7 @@ const isManager = computed(() => {
         <BaseCard padding="md" class="stat-card">
           <div class="stat-card-content">
             <div class="stat-icon stat-icon-success">
-              <span>👥</span>
+              <UsersIcon class="stat-icon-svg" />
             </div>
             <div class="stat-details">
               <div class="stat-label">Active Resources</div>
@@ -207,7 +217,7 @@ const isManager = computed(() => {
         <BaseCard v-if="isManager" padding="md" class="stat-card">
           <div class="stat-card-content">
             <div class="stat-icon stat-icon-secondary">
-              <span>📋</span>
+              <ClipboardIcon class="stat-icon-svg" />
             </div>
             <div class="stat-details">
               <div class="stat-label">Pending Business Cases</div>
@@ -240,27 +250,27 @@ const isManager = computed(() => {
       <BaseCard title="Quick Actions" padding="md">
         <div class="quick-actions-grid">
           <NuxtLink to="/budget-items" class="quick-action-btn">
-            <span class="quick-action-icon">💰</span>
+            <BanknotesIcon class="quick-action-icon" />
             <span>Manage Budgets</span>
           </NuxtLink>
           <NuxtLink to="/business-cases" class="quick-action-btn">
-            <span class="quick-action-icon">📋</span>
+            <ClipboardIcon class="quick-action-icon" />
             <span>Business Cases</span>
           </NuxtLink>
           <NuxtLink to="/purchase-orders" class="quick-action-btn">
-            <span class="quick-action-icon">📄</span>
+            <DocumentIcon class="quick-action-icon" />
             <span>Purchase Orders</span>
           </NuxtLink>
           <NuxtLink to="/goods-receipts" class="quick-action-btn">
-            <span class="quick-action-icon">📦</span>
+            <CubeIcon class="quick-action-icon" />
             <span>Goods Receipts</span>
           </NuxtLink>
           <NuxtLink v-if="isManager" to="/resources" class="quick-action-btn">
-            <span class="quick-action-icon">👥</span>
+            <UsersIcon class="quick-action-icon" />
             <span>Resources</span>
           </NuxtLink>
           <NuxtLink v-if="isManager" to="/admin/audit" class="quick-action-btn">
-            <span class="quick-action-icon">📊</span>
+            <ChartBarIcon class="quick-action-icon" />
             <span>Audit Logs</span>
           </NuxtLink>
         </div>
@@ -378,6 +388,12 @@ const isManager = computed(() => {
   font-size: var(--text-2xl);
 }
 
+.stat-icon-svg {
+  width: 32px;
+  height: 32px;
+  stroke-width: 1.5;
+}
+
 .stat-icon-primary {
   background: #e0e7ff;
 }
@@ -484,7 +500,10 @@ const isManager = computed(() => {
 }
 
 .quick-action-icon {
-  font-size: var(--text-2xl);
+  width: 28px;
+  height: 28px;
+  stroke-width: 1.5;
+  color: var(--color-primary);
 }
 
 /* Recent Activity */
