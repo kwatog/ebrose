@@ -1,8 +1,13 @@
 from decimal import Decimal
-
-from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, Boolean, Numeric
+from datetime import datetime, timezone
+from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, Boolean, Numeric, DateTime
 from sqlalchemy.orm import relationship, column_property
 from .database import Base
+
+
+def now_utc():
+    """Get current UTC timestamp as timezone-aware datetime."""
+    return datetime.now(timezone.utc)
 
 
 class User(Base):
@@ -85,13 +90,13 @@ class BudgetItem(Base):
     budget_amount = Column(Numeric(10, 2), nullable=False)
     currency = Column(String(10), nullable=False)
     fiscal_year = Column(Integer, nullable=False)
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False, index=True)
 
     # Audit
-    created_by = Column(Integer, ForeignKey("user.id"))
+    created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
     created_at = Column(String(32))
-    updated_at = Column(String(32))
+    updated_at = Column(String(32), nullable=True)
 
     line_items = relationship("BusinessCaseLineItem", back_populates="budget_item")
 
@@ -106,13 +111,13 @@ class BusinessCase(Base):
     dept = Column(String(255))
     lead_group_id = Column(Integer, ForeignKey("user_group.id"))
     estimated_cost = Column(Numeric(10, 2))
-    status = Column(String(50))
+    status = Column(String(50), index=True)
 
     # Audit
-    created_by = Column(Integer, ForeignKey("user.id"))
+    created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
     created_at = Column(String(32))
-    updated_at = Column(String(32))
+    updated_at = Column(String(32), nullable=True)
 
     line_items = relationship("BusinessCaseLineItem", back_populates="business_case")
 
@@ -123,20 +128,20 @@ class BusinessCaseLineItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     business_case_id = Column(Integer, ForeignKey("business_case.id"), nullable=False)
     budget_item_id = Column(Integer, ForeignKey("budget_item.id"), nullable=False)
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False, index=True)
     title = Column(Text, nullable=False)
     description = Column(Text)
     spend_category = Column(String(20), nullable=False)  # CAPEX, OPEX
     requested_amount = Column(Numeric(10, 2), nullable=False)
     currency = Column(String(10), nullable=False)
     planned_commit_date = Column(String(32))
-    status = Column(String(50))
+    status = Column(String(50), index=True)
 
     # Audit
-    created_by = Column(Integer, ForeignKey("user.id"))
+    created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
     created_at = Column(String(32))
-    updated_at = Column(String(32))
+    updated_at = Column(String(32), nullable=True)
 
     business_case = relationship("BusinessCase", back_populates="line_items")
     budget_item = relationship("BudgetItem", back_populates="line_items")
@@ -150,14 +155,14 @@ class WBS(Base):
     business_case_line_item_id = Column(Integer, ForeignKey("business_case_line_item.id"), nullable=False)
     wbs_code = Column(String(255), unique=True, index=True)
     description = Column(Text)
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
-    status = Column(String(50))
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False, index=True)
+    status = Column(String(50), index=True)
 
     # Audit
-    created_by = Column(Integer, ForeignKey("user.id"))
+    created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
     created_at = Column(String(32))
-    updated_at = Column(String(32))
+    updated_at = Column(String(32), nullable=True)
 
     line_item = relationship("BusinessCaseLineItem", back_populates="wbs_items")
     assets = relationship("Asset", back_populates="wbs")
@@ -177,14 +182,14 @@ class Asset(Base):
     asset_code = Column(String(255), unique=True, index=True)
     asset_type = Column(String(50))
     description = Column(Text)
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
-    status = Column(String(50))
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False, index=True)
+    status = Column(String(50), index=True)
 
     # Audit
-    created_by = Column(Integer, ForeignKey("user.id"))
+    created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
     created_at = Column(String(32))
-    updated_at = Column(String(32))
+    updated_at = Column(String(32), nullable=True)
 
     wbs = relationship("WBS", back_populates="assets")
     purchase_orders = relationship("PurchaseOrder", back_populates="asset")
@@ -206,14 +211,14 @@ class PurchaseOrder(Base):
     spend_category = Column(String(20), nullable=False)  # CAPEX, OPEX
     planned_commit_date = Column(String(32))
     actual_commit_date = Column(String(32))
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
-    status = Column(String(50))
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False, index=True)
+    status = Column(String(50), index=True)
 
     # Audit
-    created_by = Column(Integer, ForeignKey("user.id"))
+    created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
     created_at = Column(String(32))
-    updated_at = Column(String(32))
+    updated_at = Column(String(32), nullable=True)
 
     asset = relationship("Asset", back_populates="purchase_orders")
     goods_receipts = relationship("GoodsReceipt", back_populates="po")
@@ -229,13 +234,13 @@ class GoodsReceipt(Base):
     gr_date = Column(String(32))
     amount = Column(Numeric(10, 2))
     description = Column(Text)
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False, index=True)
 
     # Audit
-    created_by = Column(Integer, ForeignKey("user.id"))
+    created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
     created_at = Column(String(32))
-    updated_at = Column(String(32))
+    updated_at = Column(String(32), nullable=True)
 
     po = relationship("PurchaseOrder", back_populates="goods_receipts")
 
@@ -250,14 +255,14 @@ class Resource(Base):
     start_date = Column(String(32))
     end_date = Column(String(32))
     cost_per_month = Column(Numeric(10, 2))
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
-    status = Column(String(50))
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False, index=True)
+    status = Column(String(50), index=True)
 
     # Audit
-    created_by = Column(Integer, ForeignKey("user.id"))
+    created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
     created_at = Column(String(32))
-    updated_at = Column(String(32))
+    updated_at = Column(String(32), nullable=True)
 
     allocations = relationship("ResourcePOAllocation", back_populates="resource")
 
@@ -271,13 +276,13 @@ class ResourcePOAllocation(Base):
     allocation_start = Column(String(32))
     allocation_end = Column(String(32))
     expected_monthly_burn = Column(Numeric(10, 2))
-    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False)
+    owner_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=False, index=True)
 
     # Audit
-    created_by = Column(Integer, ForeignKey("user.id"))
+    created_by = Column(Integer, ForeignKey("user.id"), index=True)
     updated_by = Column(Integer, ForeignKey("user.id"))
     created_at = Column(String(32))
-    updated_at = Column(String(32))
+    updated_at = Column(String(32), nullable=True)
 
     resource = relationship("Resource", back_populates="allocations")
     po = relationship("PurchaseOrder", back_populates="allocations")

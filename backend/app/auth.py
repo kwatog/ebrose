@@ -11,12 +11,8 @@ from .database import SessionLocal
 from . import models
 
 def now_utc() -> str:
-    """Get current UTC timestamp as ISO string. Replaces deprecated datetime.now(timezone.utc)."""
+    """Get current UTC timestamp as ISO string."""
     return datetime.now(timezone.utc).isoformat()
-
-def now_utc_datetime() -> datetime:
-    """Get current UTC datetime. Use when you need a datetime object, not a string."""
-    return datetime.now(timezone.utc)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:

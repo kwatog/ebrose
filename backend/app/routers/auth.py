@@ -1,5 +1,6 @@
 import json
 import base64
+import os
 import re
 from datetime import timedelta
 from pydantic import BaseModel
@@ -12,6 +13,10 @@ from .. import models, schemas
 from ..auth import get_db, verify_password, get_password_hash, create_access_token, get_current_user, ACCESS_TOKEN_EXPIRE_MINUTES, now_utc
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# Cookie security settings based on environment
+ENVIRONMENT = os.getenv("ENVIRONMENT", "").lower()
+IS_PRODUCTION = ENVIRONMENT in ["production", "prod", "staging"]
 
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_REQUIRE_UPPERCASE = True
@@ -89,12 +94,12 @@ def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), 
         expires_delta=access_token_expires
     )
     
-    # Set HttpOnly cookie (secure=False for localhost/development)
+    # Set HttpOnly cookie (secure in production)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False,  # Set to True in production with HTTPS
+        secure=IS_PRODUCTION,
         samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60  # Convert to seconds
     )
@@ -111,7 +116,7 @@ def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), 
     response.set_cookie(
         key="user_info",
         value=user_info_b64,
-        secure=False,  # Set to True in production with HTTPS
+        secure=IS_PRODUCTION,
         samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
@@ -153,7 +158,7 @@ def refresh_token(request: Request, response: Response, db: Session = Depends(ge
         key="access_token",
         value=new_access_token,
         httponly=True,
-        secure=False,  # Set to True in production with HTTPS
+        secure=IS_PRODUCTION,
         samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
@@ -170,7 +175,7 @@ def refresh_token(request: Request, response: Response, db: Session = Depends(ge
     response.set_cookie(
         key="user_info",
         value=user_info_b64,
-        secure=False,  # Set to True in production with HTTPS
+        secure=IS_PRODUCTION,
         samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
