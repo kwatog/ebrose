@@ -450,21 +450,21 @@ onMounted(async () => {
     <BaseModal v-model="showCreateModal" title="Create Line Item" size="lg">
       <form @submit.prevent="createItem">
         <BaseSelect
-          v-model.number="form.business_case_id"
+          v-model="form.business_case_id"
           :options="businessCaseOptions"
           label="Business Case"
           required
         />
 
         <BaseSelect
-          v-model.number="form.budget_item_id"
+          v-model="form.budget_item_id"
           :options="budgetItemOptions"
           label="Budget Item"
           required
         />
 
         <BaseSelect
-          v-model.number="form.owner_group_id"
+          v-model="form.owner_group_id"
           :options="groupOptions"
           label="Owner Group"
           required

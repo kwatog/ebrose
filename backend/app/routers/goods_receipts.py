@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, get_current_user, check_record_access, audit_log_change
+from ..auth import get_db, get_current_user, check_record_access, audit_log_change, now_utc
 
 router = APIRouter(prefix="/goods-receipts", tags=["goods-receipts"])
 
@@ -34,13 +33,13 @@ def get_accessible_gr_ids(db: Session, user: models.User) -> List[int]:
     user_access = db.query(models.RecordAccess).filter(
         models.RecordAccess.record_type == "GoodsReceipt",
         models.RecordAccess.user_id == user.id,
-        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
     ).all()
     
     group_access = db.query(models.RecordAccess).filter(
         models.RecordAccess.record_type == "GoodsReceipt",
         models.RecordAccess.group_id.in_(user_group_ids),
-        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
     ).all()
     
     accessible_ids = set(owned_ids + created_ids)
@@ -84,7 +83,7 @@ def get_goods_receipt(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("GoodsReceipt", "gr_id", "Read"))
 ):
-    gr = db.query(models.GoodsReceipt).get(gr_id)
+    gr = db.get(models.GoodsReceipt, gr_id)
     if not gr:
         raise HTTPException(status_code=404, detail="GoodsReceipt not found")
     return gr
@@ -120,7 +119,7 @@ async def create_goods_receipt(
                     (models.RecordAccess.group_id.in_(group_ids))
                 ),
                 models.RecordAccess.access_level.in_(["Write", "Full"]),
-                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
             ).first()
 
             if not po_access:
@@ -134,7 +133,7 @@ async def create_goods_receipt(
         **gr.model_dump(exclude={'owner_group_id'}),
         owner_group_id=po.owner_group_id,  # Inherit from parent
         created_by=current_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db.add(db_gr)
     db.commit()
@@ -151,7 +150,7 @@ async def update_goods_receipt(
     current_user: models.User = Depends(check_record_access("GoodsReceipt", "gr_id", "Write"))
 ):
     """Update an existing goods receipt."""
-    gr = db.query(models.GoodsReceipt).get(gr_id)
+    gr = db.get(models.GoodsReceipt, gr_id)
     if not gr:
         raise HTTPException(status_code=404, detail="GoodsReceipt not found")
 
@@ -160,7 +159,7 @@ async def update_goods_receipt(
     for k, v in data.items():
         setattr(gr, k, v)
     gr.updated_by = current_user.id
-    gr.updated_at = datetime.utcnow().isoformat()
+    gr.updated_at = now_utc()
 
     db.commit()
     db.refresh(gr)
@@ -174,7 +173,7 @@ async def delete_goods_receipt(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("GoodsReceipt", "gr_id", "Full"))
 ):
-    gr = db.query(models.GoodsReceipt).get(gr_id)
+    gr = db.get(models.GoodsReceipt, gr_id)
     if not gr:
         raise HTTPException(status_code=404, detail="GoodsReceipt not found")
     db.delete(gr)

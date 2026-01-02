@@ -1,15 +1,15 @@
 import json
 import base64
 import re
+from datetime import timedelta
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
 
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, verify_password, get_password_hash, create_access_token, get_current_user, ACCESS_TOKEN_EXPIRE_MINUTES
+from ..auth import get_db, verify_password, get_password_hash, create_access_token, get_current_user, ACCESS_TOKEN_EXPIRE_MINUTES, now_utc
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -61,7 +61,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db), current_us
         full_name=user.full_name,
         department=user.department,
         role=user.role,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db.add(new_user)
     db.commit()
@@ -79,7 +79,7 @@ def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), 
         )
     
     # Update last login
-    user.last_login = datetime.utcnow().isoformat()
+    user.last_login = now_utc()
     db.commit()
 
     # Create access token with longer expiry for cookie storage
@@ -201,7 +201,7 @@ def update_users_me(
         current_user.department = user_update.department
     
     current_user.updated_by = current_user.id
-    current_user.updated_at = datetime.utcnow().isoformat()
+    current_user.updated_at = now_utc()
     
     db.commit()
     db.refresh(current_user)
@@ -233,7 +233,7 @@ def change_password(
     # Hash and update password
     current_user.hashed_password = get_password_hash(password_change.new_password)
     current_user.updated_by = current_user.id
-    current_user.updated_at = datetime.utcnow().isoformat()
+    current_user.updated_at = now_utc()
     
     db.commit()
     

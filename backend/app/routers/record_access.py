@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import datetime
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, get_current_user, require_role
+from ..auth import get_db, get_current_user, require_role, now_utc
 
 router = APIRouter(prefix="/record-access", tags=["record-access"])
 
@@ -30,7 +29,7 @@ def grant_access(
 ):
     # Validate target user role - prevent Viewer from receiving Write/Full access
     if access.user_id:
-        target_user = db.query(models.User).get(access.user_id)
+        target_user = db.get(models.User, access.user_id)
         if target_user and target_user.role == "Viewer":
             if access.access_level in ["Write", "Full"]:
                 raise HTTPException(
@@ -72,7 +71,7 @@ def grant_access(
     db_access = models.RecordAccess(
         **access.model_dump(),
         granted_by=current_user.id,
-        granted_at=datetime.utcnow().isoformat()
+        granted_at=now_utc()
     )
     db.add(db_access)
     db.commit()
@@ -117,7 +116,7 @@ def update_access(
     # Update allowed fields
     if access_update.access_level is not None:
         if access_record.user_id:
-            target_user = db.query(models.User).get(access_record.user_id)
+            target_user = db.get(models.User, access_record.user_id)
             if target_user and target_user.role == "Viewer":
                 if access_update.access_level in ["Write", "Full"]:
                     raise HTTPException(
@@ -130,7 +129,7 @@ def update_access(
 
     # Update modification tracking
     access_record.updated_by = current_user.id
-    access_record.updated_at = datetime.utcnow().isoformat()
+    access_record.updated_at = now_utc()
 
     db.commit()
     db.refresh(access_record)

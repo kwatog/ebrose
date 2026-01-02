@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import datetime
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, get_current_user, check_record_access, audit_log_change
+from ..auth import get_db, get_current_user, check_record_access, audit_log_change, now_utc
 
 router = APIRouter(prefix="/wbs", tags=["wbs"])
 
@@ -39,7 +38,7 @@ def list_wbs(
         explicit_access = db.query(models.RecordAccess.record_id).filter(
             models.RecordAccess.record_type == "WBS",
             models.RecordAccess.user_id == current_user.id,
-            (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+            (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
         )
 
         accessible_ids = [item.id for item in accessible_ids_query.all()]
@@ -67,7 +66,7 @@ def get_wbs(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("WBS", "wbs_id", "Read"))
 ):
-    wbs = db.query(models.WBS).get(wbs_id)
+    wbs = db.get(models.WBS, wbs_id)
     if not wbs:
         raise HTTPException(status_code=404, detail="WBS not found")
     return wbs
@@ -104,7 +103,7 @@ async def create_wbs(
                     (models.RecordAccess.group_id.in_(group_ids))
                 ),
                 models.RecordAccess.access_level.in_(["Write", "Full"]),
-                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
             ).first()
 
             if not line_item_access:
@@ -118,7 +117,7 @@ async def create_wbs(
         **wbs.model_dump(exclude={'owner_group_id'}),
         owner_group_id=line_item.owner_group_id,  # Inherit from parent
         created_by=current_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db.add(db_wbs)
     db.commit()
@@ -135,7 +134,7 @@ async def update_wbs(
     current_user: models.User = Depends(check_record_access("WBS", "wbs_id", "Write"))
 ):
     """Update an existing WBS item."""
-    wbs = db.query(models.WBS).get(wbs_id)
+    wbs = db.get(models.WBS, wbs_id)
     if not wbs:
         raise HTTPException(status_code=404, detail="WBS not found")
 
@@ -144,7 +143,7 @@ async def update_wbs(
     for k, v in data.items():
         setattr(wbs, k, v)
     wbs.updated_by = current_user.id
-    wbs.updated_at = datetime.utcnow().isoformat()
+    wbs.updated_at = now_utc()
 
     db.commit()
     db.refresh(wbs)
@@ -158,7 +157,7 @@ async def delete_wbs(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("WBS", "wbs_id", "Full"))
 ):
-    wbs = db.query(models.WBS).get(wbs_id)
+    wbs = db.get(models.WBS, wbs_id)
     if not wbs:
         raise HTTPException(status_code=404, detail="WBS not found")
     db.delete(wbs)

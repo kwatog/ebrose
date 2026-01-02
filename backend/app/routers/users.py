@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, get_current_user, require_role, get_password_hash
+from ..auth import get_db, get_current_user, require_role, get_password_hash, now_utc
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -20,7 +20,7 @@ def get_user(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role("User"))
 ):
-    user = db.query(models.User).get(user_id)
+    user = db.get(models.User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -36,7 +36,7 @@ def update_user(
     if current_user.role != "Admin" and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this user")
 
-    db_user = db.query(models.User).get(user_id)
+    db_user = db.get(models.User, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -59,7 +59,7 @@ def delete_user(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role("Admin"))
 ):
-    user = db.query(models.User).get(user_id)
+    user = db.get(models.User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     db.delete(user)

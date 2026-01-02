@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from decimal import Decimal
 from typing import Optional, List
 from pydantic import field_validator
@@ -27,8 +27,8 @@ class User(UserBase):
     created_at: Optional[str] = None
     last_login: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class Token(BaseModel):
     access_token: str
@@ -64,8 +64,7 @@ class UserGroup(UserGroupBase):
     created_by: Optional[int] = None
     created_at: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserGroupMembershipBase(BaseModel):
@@ -79,12 +78,9 @@ class UserGroupMembership(UserGroupMembershipBase):
     id: int
     added_by: Optional[int] = None
     added_at: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
 
+    model_config = ConfigDict(from_attributes=True)
 
-# --- RecordAccess ---
 class RecordAccessBase(BaseModel):
     record_type: str
     record_id: int
@@ -107,11 +103,8 @@ class RecordAccess(RecordAccessBase):
     updated_by: Optional[int] = None
     updated_at: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-
-# --- AuditLog ---
 class AuditLogBase(BaseModel):
     table_name: str
     record_id: int
@@ -125,8 +118,7 @@ class AuditLogBase(BaseModel):
 
 class AuditLog(AuditLogBase):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Base Audit Mixin for Schemas ---
@@ -175,8 +167,7 @@ class BudgetItemUpdate(BaseModel):
 
 class BudgetItem(BudgetItemBase, AuditMixin):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- BusinessCase ---
@@ -221,8 +212,7 @@ class BusinessCaseUpdate(BaseModel):
 
 class BusinessCase(BusinessCaseBase, AuditMixin):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- BusinessCaseLineItem ---
@@ -267,9 +257,7 @@ class BusinessCaseLineItemUpdate(BaseModel):
         return Decimal(str(v)).quantize(Decimal('0.01'))
 
 class BusinessCaseLineItem(BusinessCaseLineItemBase, AuditMixin):
-    id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- WBS ---
@@ -290,8 +278,7 @@ class WBSUpdate(BaseModel):
 
 class WBS(WBSBase, AuditMixin):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Asset ---
@@ -314,8 +301,7 @@ class AssetUpdate(BaseModel):
 
 class Asset(AssetBase, AuditMixin):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- PurchaseOrder ---
@@ -371,8 +357,7 @@ class PurchaseOrderUpdate(BaseModel):
 
 class PurchaseOrder(PurchaseOrderBase, AuditMixin):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- GoodsReceipt ---
@@ -410,8 +395,7 @@ class GoodsReceiptUpdate(BaseModel):
 
 class GoodsReceipt(GoodsReceiptBase, AuditMixin):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Resource ---
@@ -457,8 +441,7 @@ class ResourceUpdate(BaseModel):
 
 class Resource(ResourceBase, AuditMixin):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- ResourcePOAllocation ---
@@ -498,8 +481,7 @@ class ResourcePOAllocationUpdate(BaseModel):
 
 class ResourcePOAllocation(ResourcePOAllocationBase, AuditMixin):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Pagination ---

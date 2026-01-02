@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import datetime
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, get_current_user, require_role
+from ..auth import get_db, get_current_user, require_role, now_utc
 
 router = APIRouter(prefix="/user-groups", tags=["user-groups"])
 
@@ -24,7 +23,7 @@ def create_group(
     db_group = models.UserGroup(
         **group.model_dump(),
         created_by=current_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db.add(db_group)
     db.commit()
@@ -37,7 +36,7 @@ def get_group(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    group = db.query(models.UserGroup).get(group_id)
+    group = db.get(models.UserGroup, group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     return group
@@ -49,7 +48,7 @@ def update_group(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role("Manager"))
 ):
-    group = db.query(models.UserGroup).get(group_id)
+    group = db.get(models.UserGroup, group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
@@ -67,7 +66,7 @@ def delete_group(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role("Manager"))
 ):
-    group = db.query(models.UserGroup).get(group_id)
+    group = db.get(models.UserGroup, group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
@@ -96,7 +95,7 @@ def add_group_member(
     db_member = models.UserGroupMembership(
         **membership.model_dump(),
         added_by=current_user.id,
-        added_at=datetime.utcnow().isoformat()
+        added_at=now_utc()
     )
     try:
         db.add(db_member)

@@ -13,14 +13,13 @@ Usage:
 
 import os
 import sys
-from datetime import datetime
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(__file__))
 
 from app.database import Base, engine, SessionLocal
 from app import models
-from app.auth import get_password_hash
+from app.auth import get_password_hash, now_utc
 
 
 def reset_database():
@@ -43,7 +42,7 @@ def seed_data():
     """Seed initial data."""
     db = SessionLocal()
     try:
-        now = datetime.utcnow().isoformat()
+        now = now_utc()
 
         # 1. Create Admin User
         admin_user = models.User(

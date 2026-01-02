@@ -1,34 +1,83 @@
+from decimal import Decimal
+from datetime import datetime
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
-from datetime import datetime
 from ..database import SessionLocal
 from .. import models
-from ..auth import get_db, get_current_user
+from ..auth import get_db, get_current_user, now_utc
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
+
+def get_user_group_ids(db: Session, user_id: int) -> List[int]:
+    """Get all group IDs the user belongs to."""
+    memberships = db.query(models.UserGroupMembership).filter(
+        models.UserGroupMembership.user_id == user_id
+    ).all()
+    return [m.group_id for m in memberships]
+
+def can_user_access_record(db: Session, user: models.User, record_type: str, record_id: int, owner_group_id: int) -> bool:
+    """Check if user can access a specific record."""
+    if user.role in ["Admin", "Manager"]:
+        return True
+    
+    user_group_ids = get_user_group_ids(db, user.id)
+    
+    if owner_group_id in user_group_ids:
+        return True
+    
+    if record_type == "PurchaseOrder":
+        record = db.get(models.PurchaseOrder, record_id)
+    elif record_type == "Resource":
+        record = db.get(models.Resource, record_id)
+    else:
+        return False
+    
+    if record and record.created_by == user.id:
+        return True
+    
+    user_access = db.query(models.RecordAccess).filter(
+        models.RecordAccess.record_type == record_type,
+        models.RecordAccess.record_id == record_id,
+        models.RecordAccess.user_id == user.id,
+        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
+    ).first()
+    
+    if user_access:
+        return True
+    
+    group_access = db.query(models.RecordAccess).filter(
+        models.RecordAccess.record_type == record_type,
+        models.RecordAccess.record_id == record_id,
+        models.RecordAccess.group_id.in_(user_group_ids) if user_group_ids else False,
+        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
+    ).first()
+    
+    if group_access:
+        return True
+    
+    return False
 
 @router.get("/", response_model=List[Dict[str, Any]])
 def get_alerts(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    # Alerts logic doesn't write, so simpler
     alerts = []
     today_str = datetime.now().strftime("%Y-%m-%d")
     current_month = datetime.now().strftime("%Y-%m")
 
-    # 1. Low PO balance & 2. No GR this month
-    # Get all POs
     pos = db.query(models.PurchaseOrder).all()
     
     for po in pos:
-        # Logic for Low PO Balance
+        if not can_user_access_record(db, current_user, "PurchaseOrder", po.id, po.owner_group_id):
+            continue
+        
         total_gr = sum(gr.amount for gr in po.goods_receipts)
         remaining = po.total_amount - total_gr
         
-        # Threshold: hardcoded 10% for now as per spec suggestion "threshold configurable"
-        threshold = po.total_amount * 0.10
+        threshold = po.total_amount * Decimal("0.10")
         if remaining < threshold and po.status == "Open":
             alerts.append({
                 "type": "low_po_balance",
@@ -38,7 +87,6 @@ def get_alerts(
                 "entity_type": "purchase_order"
             })
 
-        # Logic for No GR this month
         if po.status == "Open":
             has_gr_this_month = any(gr.gr_date and gr.gr_date.startswith(current_month) for gr in po.goods_receipts)
             if not has_gr_this_month:
@@ -50,8 +98,6 @@ def get_alerts(
                     "entity_type": "purchase_order"
                 })
         
-        # Logic for Missing chain
-        # PO -> Asset -> WBS -> BusinessCase
         if not po.asset:
             alerts.append({
                 "type": "missing_chain",
@@ -75,13 +121,14 @@ def get_alerts(
                  "severity": "error",
                  "entity_id": po.asset.wbs.id,
                  "entity_type": "wbs"
-            })
+             })
 
-    # 3. Resource without PO
-    # Resource has status = 'Active' AND no allocation covering today
     resources = db.query(models.Resource).filter(models.Resource.status == "Active").all()
     
     for res in resources:
+        if not can_user_access_record(db, current_user, "Resource", res.id, res.owner_group_id):
+            continue
+        
         has_active_allocation = False
         for alloc in res.allocations:
             if alloc.allocation_start and alloc.allocation_end:

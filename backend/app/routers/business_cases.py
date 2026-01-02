@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import datetime
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, get_current_user, check_record_access, audit_log_change
+from ..auth import get_db, get_current_user, check_record_access, audit_log_change, now_utc
 
 router = APIRouter(prefix="/business-cases", tags=["business-cases"])
 
@@ -55,7 +54,7 @@ def get_business_case(
     """Get a specific business case - uses hybrid access control."""
     from app.auth import check_business_case_access
 
-    bc = db.query(models.BusinessCase).get(bc_id)
+    bc = db.get(models.BusinessCase, bc_id)
     if not bc:
         raise HTTPException(status_code=404, detail="BusinessCase not found")
 
@@ -77,7 +76,7 @@ async def create_business_case(
     db_bc = models.BusinessCase(
         **bc.model_dump(),
         created_by=current_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db.add(db_bc)
     db.commit()
@@ -95,7 +94,7 @@ async def update_business_case(
     from app.auth import check_business_case_access
 
     # Fetch the business case
-    bc = db.query(models.BusinessCase).get(bc_id)
+    bc = db.get(models.BusinessCase, bc_id)
     if not bc:
         raise HTTPException(status_code=404, detail="BusinessCase not found")
 
@@ -121,7 +120,7 @@ async def update_business_case(
         setattr(bc, field, value)
 
     bc.updated_by = current_user.id
-    bc.updated_at = datetime.utcnow().isoformat()
+    bc.updated_at = now_utc()
 
     db.commit()
     db.refresh(bc)
@@ -136,7 +135,7 @@ async def delete_business_case(
     current_user: models.User = Depends(get_current_user)
 ):
     """Delete a business case - uses hybrid access control."""
-    bc = db.query(models.BusinessCase).get(bc_id)
+    bc = db.get(models.BusinessCase, bc_id)
     if not bc:
         raise HTTPException(status_code=404, detail="BusinessCase not found")
 

@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, get_current_user, check_record_access, audit_log_change
+from ..auth import get_db, get_current_user, check_record_access, audit_log_change, now_utc
 
 router = APIRouter(prefix="/allocations", tags=["allocations"])
 
@@ -34,13 +33,13 @@ def get_accessible_allocation_ids(db: Session, user: models.User) -> List[int]:
     user_access = db.query(models.RecordAccess).filter(
         models.RecordAccess.record_type == "ResourcePOAllocation",
         models.RecordAccess.user_id == user.id,
-        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
     ).all()
     
     group_access = db.query(models.RecordAccess).filter(
         models.RecordAccess.record_type == "ResourcePOAllocation",
         models.RecordAccess.group_id.in_(user_group_ids),
-        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
     ).all()
     
     accessible_ids = set(owned_ids + created_ids)
@@ -89,7 +88,7 @@ def get_allocation(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("ResourcePOAllocation", "alloc_id", "Read"))
 ):
-    alloc = db.query(models.ResourcePOAllocation).get(alloc_id)
+    alloc = db.get(models.ResourcePOAllocation, alloc_id)
     if not alloc:
         raise HTTPException(status_code=404, detail="ResourcePOAllocation not found")
     return alloc
@@ -131,7 +130,7 @@ async def create_allocation(
                     (models.RecordAccess.group_id.in_(group_ids))
                 ),
                 models.RecordAccess.access_level.in_(["Write", "Full"]),
-                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
             ).first()
 
         if po.owner_group_id not in group_ids:
@@ -143,7 +142,7 @@ async def create_allocation(
                     (models.RecordAccess.group_id.in_(group_ids))
                 ),
                 models.RecordAccess.access_level.in_(["Write", "Full"]),
-                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
             ).first()
 
         if resource.owner_group_id not in group_ids and not resource_access:
@@ -161,7 +160,7 @@ async def create_allocation(
         **alloc.model_dump(exclude={'owner_group_id'}),
         owner_group_id=po.owner_group_id,
         created_by=current_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db.add(db_alloc)
     db.commit()
@@ -177,7 +176,7 @@ async def update_allocation(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("ResourcePOAllocation", "alloc_id", "Write"))
 ):
-    alloc = db.query(models.ResourcePOAllocation).get(alloc_id)
+    alloc = db.get(models.ResourcePOAllocation, alloc_id)
     if not alloc:
         raise HTTPException(status_code=404, detail="ResourcePOAllocation not found")
 
@@ -185,7 +184,7 @@ async def update_allocation(
     for k, v in data.items():
         setattr(alloc, k, v)
     alloc.updated_by = current_user.id
-    alloc.updated_at = datetime.utcnow().isoformat()
+    alloc.updated_at = now_utc()
 
     db.commit()
     db.refresh(alloc)
@@ -199,7 +198,7 @@ async def delete_allocation(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("ResourcePOAllocation", "alloc_id", "Full"))
 ):
-    alloc = db.query(models.ResourcePOAllocation).get(alloc_id)
+    alloc = db.get(models.ResourcePOAllocation, alloc_id)
     if not alloc:
         raise HTTPException(status_code=404, detail="ResourcePOAllocation not found")
     db.delete(alloc)

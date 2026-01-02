@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, get_current_user, check_record_access, audit_log_change
+from ..auth import get_db, get_current_user, check_record_access, audit_log_change, now_utc
 
 router = APIRouter(prefix="/purchase-orders", tags=["purchase-orders"])
 
@@ -41,13 +40,13 @@ def get_accessible_po_ids(db: Session, user: models.User) -> List[int]:
     user_access = db.query(models.RecordAccess).filter(
         models.RecordAccess.record_type == "PurchaseOrder",
         models.RecordAccess.user_id == user.id,
-        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
     ).all()
     
     group_access = db.query(models.RecordAccess).filter(
         models.RecordAccess.record_type == "PurchaseOrder",
         models.RecordAccess.group_id.in_(user_group_ids),
-        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
     ).all()
     
     accessible_ids = set(owned_ids + created_ids)
@@ -94,7 +93,7 @@ def get_purchase_order(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("PurchaseOrder", "po_id", "Read"))
 ):
-    po = db.query(models.PurchaseOrder).get(po_id)
+    po = db.get(models.PurchaseOrder, po_id)
     if not po:
         raise HTTPException(status_code=404, detail="PurchaseOrder not found")
     return po
@@ -130,7 +129,7 @@ async def create_purchase_order(
                     (models.RecordAccess.group_id.in_(group_ids))
                 ),
                 models.RecordAccess.access_level.in_(["Write", "Full"]),
-                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
             ).first()
 
             if not asset_access:
@@ -144,7 +143,7 @@ async def create_purchase_order(
         **po.model_dump(exclude={'owner_group_id'}),
         owner_group_id=asset.owner_group_id,  # Inherit from parent
         created_by=current_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db.add(db_po)
     db.commit()
@@ -159,7 +158,7 @@ async def delete_purchase_order(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("PurchaseOrder", "po_id", "Full"))
 ):
-    po = db.query(models.PurchaseOrder).get(po_id)
+    po = db.get(models.PurchaseOrder, po_id)
     if not po:
         raise HTTPException(status_code=404, detail="PurchaseOrder not found")
     db.delete(po)
@@ -175,7 +174,7 @@ async def update_purchase_order(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("PurchaseOrder", "po_id", "Write"))
 ):
-    po = db.query(models.PurchaseOrder).get(po_id)
+    po = db.get(models.PurchaseOrder, po_id)
     if not po:
         raise HTTPException(status_code=404, detail="PurchaseOrder not found")
 
@@ -184,7 +183,7 @@ async def update_purchase_order(
     for k, v in data.items():
         setattr(po, k, v)
     po.updated_by = current_user.id
-    po.updated_at = datetime.utcnow().isoformat()
+    po.updated_at = now_utc()
 
     db.commit()
     db.refresh(po)

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Union
 import json
 import os
@@ -9,6 +9,14 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2Pas
 from sqlalchemy.orm import Session
 from .database import SessionLocal
 from . import models
+
+def now_utc() -> str:
+    """Get current UTC timestamp as ISO string. Replaces deprecated datetime.now(timezone.utc)."""
+    return datetime.now(timezone.utc).isoformat()
+
+def now_utc_datetime() -> datetime:
+    """Get current UTC datetime. Use when you need a datetime object, not a string."""
+    return datetime.now(timezone.utc)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
@@ -90,7 +98,7 @@ def check_business_case_access(user: "models.User", business_case: "models.Busin
                 (models.RecordAccess.user_id == user.id) |
                 (models.RecordAccess.group_id.in_(user_group_ids))
             ),
-            (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+            (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
         ).first()
 
         if not bc_access or access_levels.get(bc_access.access_level, 0) < access_levels.get(required_level, 2):
@@ -111,7 +119,7 @@ def check_business_case_access(user: "models.User", business_case: "models.Busin
                 (models.RecordAccess.user_id == user.id) |
                 (models.RecordAccess.group_id.in_(user_group_ids))
             ),
-            (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+            (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
         ).first()
 
         if budget_access:
@@ -126,7 +134,7 @@ def check_business_case_access(user: "models.User", business_case: "models.Busin
             (models.RecordAccess.user_id == user.id) |
             (models.RecordAccess.group_id.in_(user_group_ids))
         ),
-        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
     ).first()
 
     if bc_access:
@@ -138,9 +146,9 @@ def check_business_case_access(user: "models.User", business_case: "models.Busin
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -248,7 +256,7 @@ def check_record_access(record_type: str, record_id_param: str, required_access:
         model_cls = getattr(models, record_type, None)
         record = None
         if model_cls:
-            record = db.query(model_cls).get(record_id)
+            record = db.get(model_cls, record_id)
 
             # Check if user is creator (has full access)
             if record and hasattr(record, 'created_by') and record.created_by == current_user.id:
@@ -267,7 +275,7 @@ def check_record_access(record_type: str, record_id_param: str, required_access:
             models.RecordAccess.record_type == record_type,
             models.RecordAccess.record_id == record_id,
             models.RecordAccess.user_id == current_user.id,
-            (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+            (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
         ).first()
         
         if user_access and access_levels.get(user_access.access_level, 0) >= req_level_val:
@@ -283,7 +291,7 @@ def check_record_access(record_type: str, record_id_param: str, required_access:
                 models.RecordAccess.record_type == record_type,
                 models.RecordAccess.record_id == record_id,
                 models.RecordAccess.group_id == membership.group_id,
-                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
             ).first()
             
             if group_access and access_levels.get(group_access.access_level, 0) >= req_level_val:
@@ -295,7 +303,7 @@ def check_record_access(record_type: str, record_id_param: str, required_access:
              if not model_cls:
                  model_cls = getattr(models, record_type, None)
              if model_cls:
-                record = db.query(model_cls).get(record_id)
+                record = db.get(model_cls, record_id)
                 if record and hasattr(record, 'dept'):
                     if record.dept == current_user.department and required_access in ["Read", "Write"]:
                         return current_user
@@ -365,7 +373,7 @@ def audit_log_change(action: str, table_name: str):
                     old_values=json.dumps(old_values, default=str) if old_values else None,
                     new_values=json.dumps(new_vals, default=str) if new_vals else None,
                     user_id=current_user.id,
-                    timestamp=datetime.utcnow().isoformat(),
+                    timestamp=now_utc(),
                     ip_address=None
                 )
                 db.add(audit_entry)

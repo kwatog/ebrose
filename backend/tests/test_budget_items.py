@@ -1,5 +1,6 @@
 import pytest
-from datetime import datetime
+
+from app.auth import now_utc
 
 
 def test_create_budget_item(client, admin_user, admin_token, test_group):
@@ -39,7 +40,7 @@ def test_create_budget_item_duplicate_workday_ref(client, admin_user, admin_toke
         fiscal_year=2025,
         owner_group_id=test_group.id,
         created_by=admin_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(budget_item)
     db_session.commit()
@@ -74,7 +75,7 @@ def test_list_budget_items(client, admin_user, admin_token, test_group, db_sessi
             fiscal_year=2025,
             owner_group_id=test_group.id,
             created_by=admin_user.id,
-            created_at=datetime.utcnow().isoformat()
+            created_at=now_utc()
         )
         db_session.add(budget_item)
     db_session.commit()
@@ -100,7 +101,7 @@ def test_update_budget_item(client, admin_user, admin_token, test_group, db_sess
         fiscal_year=2025,
         owner_group_id=test_group.id,
         created_by=admin_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(budget_item)
     db_session.commit()
@@ -133,7 +134,7 @@ def test_delete_budget_item(client, admin_user, admin_token, test_group, db_sess
         fiscal_year=2025,
         owner_group_id=test_group.id,
         created_by=admin_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(budget_item)
     db_session.commit()
@@ -167,7 +168,7 @@ def test_pagination_budget_items(client, admin_user, admin_token, test_group, db
             fiscal_year=2025,
             owner_group_id=test_group.id,
             created_by=admin_user.id,
-            created_at=datetime.utcnow().isoformat()
+            created_at=now_utc()
         )
         db_session.add(budget_item)
     db_session.commit()

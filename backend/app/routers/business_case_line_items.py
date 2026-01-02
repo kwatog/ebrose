@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import datetime
 
 from .. import models, schemas
 from ..database import SessionLocal
-from ..auth import get_current_user, require_role
+from ..auth import get_current_user, require_role, now_utc
 
 router = APIRouter(prefix="/business-case-line-items", tags=["business-case-line-items"])
 
@@ -49,7 +48,7 @@ def list_line_items(
         explicit_access = db.query(models.RecordAccess.record_id).filter(
             models.RecordAccess.record_type == "BusinessCaseLineItem",
             models.RecordAccess.user_id == current_user.id,
-            (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+            (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
         )
 
         accessible_ids = [item.id for item in accessible_ids_query.all()]
@@ -105,9 +104,9 @@ def create_line_item(
 
     # Create new line item
     db_line_item = models.BusinessCaseLineItem(
-        **line_item.dict(),
+        **line_item.model_dump(),
         created_by=current_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
 
     db.add(db_line_item)
@@ -117,9 +116,9 @@ def create_line_item(
         table_name="business_case_line_item",
         record_id=db_line_item.id,
         action="CREATE",
-        new_values=line_item.json(),
+        new_values=line_item.model_dump_json(),
         user_id=current_user.id,
-        timestamp=datetime.utcnow().isoformat()
+        timestamp=now_utc()
     )
     db.add(audit_entry)
 
@@ -141,25 +140,25 @@ def update_line_item(
         raise HTTPException(status_code=404, detail="Business case line item not found")
 
     # Store old values for audit
-    old_values = schemas.BusinessCaseLineItem.from_orm(db_line_item).dict()
+    old_values = schemas.BusinessCaseLineItem.model_validate(db_line_item).model_dump()
 
     # Update fields
-    update_data = line_item_update.dict(exclude_unset=True)
+    update_data = line_item_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_line_item, key, value)
 
     db_line_item.updated_by = current_user.id
-    db_line_item.updated_at = datetime.utcnow().isoformat()
+    db_line_item.updated_at = now_utc()
 
     # Add audit log
     audit_entry = models.AuditLog(
         table_name="business_case_line_item",
         record_id=id,
         action="UPDATE",
-        old_values=schemas.BusinessCaseLineItem(**old_values).json(),
-        new_values=schemas.BusinessCaseLineItem.from_orm(db_line_item).json(),
+        old_values=schemas.BusinessCaseLineItem(**old_values).model_dump_json(),
+        new_values=schemas.BusinessCaseLineItem.model_validate(db_line_item).model_dump_json(),
         user_id=current_user.id,
-        timestamp=datetime.utcnow().isoformat()
+        timestamp=now_utc()
     )
     db.add(audit_entry)
 
@@ -190,16 +189,16 @@ def delete_line_item(
         )
 
     # Store for audit
-    old_values = schemas.BusinessCaseLineItem.from_orm(db_line_item).dict()
+    old_values = schemas.BusinessCaseLineItem.model_validate(db_line_item).model_dump()
 
     # Add audit log
     audit_entry = models.AuditLog(
         table_name="business_case_line_item",
         record_id=id,
         action="DELETE",
-        old_values=schemas.BusinessCaseLineItem(**old_values).json(),
+        old_values=schemas.BusinessCaseLineItem(**old_values).model_dump_json(),
         user_id=current_user.id,
-        timestamp=datetime.utcnow().isoformat()
+        timestamp=now_utc()
     )
     db.add(audit_entry)
 

@@ -1,5 +1,6 @@
 import pytest
-from datetime import datetime
+
+from app.auth import now_utc
 
 
 def test_bc_creator_has_read_access_always(client, regular_user, user_token, db_session):
@@ -12,7 +13,7 @@ def test_bc_creator_has_read_access_always(client, regular_user, user_token, db_
         description="Test BC created by regular user",
         status="Draft",
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(bc)
     db_session.commit()
@@ -63,7 +64,7 @@ def test_bc_creator_can_write_draft_only(client, regular_user, user_token, db_se
         fiscal_year=2025,
         owner_group_id=group.id,
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(budget)
 
@@ -73,7 +74,7 @@ def test_bc_creator_can_write_draft_only(client, regular_user, user_token, db_se
         description="Draft status BC",
         status="Draft",
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(bc_draft)
     db_session.commit()
@@ -90,7 +91,7 @@ def test_bc_creator_can_write_draft_only(client, regular_user, user_token, db_se
         currency="USD",
         owner_group_id=group.id,
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(line_item)
     db_session.commit()
@@ -125,7 +126,7 @@ def test_bc_line_item_based_access(client, admin_user, regular_user, user_token,
         fiscal_year=2025,
         owner_group_id=test_group.id,
         created_by=admin_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(budget)
 
@@ -135,7 +136,7 @@ def test_bc_line_item_based_access(client, admin_user, regular_user, user_token,
         description="BC accessible via line item",
         status="Draft",
         created_by=admin_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(bc)
     db_session.commit()
@@ -152,7 +153,7 @@ def test_bc_line_item_based_access(client, admin_user, regular_user, user_token,
         currency="USD",
         owner_group_id=test_group.id,
         created_by=admin_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(line_item)
     db_session.commit()
@@ -184,7 +185,7 @@ def test_bc_explicit_record_access_override(client, admin_user, regular_user, us
         description="BC with explicit access grant",
         status="Submitted",
         created_by=admin_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(bc)
     db_session.commit()
@@ -240,7 +241,7 @@ def test_bc_status_transition_requires_line_items(client, regular_user, user_tok
         description="BC with no line items",
         status="Draft",
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(bc)
     db_session.commit()
@@ -276,7 +277,7 @@ def test_bc_status_transition_allowed_with_line_items(client, admin_user, regula
         fiscal_year=2025,
         owner_group_id=test_group.id,
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(budget)
 
@@ -286,7 +287,7 @@ def test_bc_status_transition_allowed_with_line_items(client, admin_user, regula
         description="BC that can be transitioned",
         status="Draft",
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(bc)
     db_session.commit()
@@ -303,7 +304,7 @@ def test_bc_status_transition_allowed_with_line_items(client, admin_user, regula
         currency="USD",
         owner_group_id=test_group.id,
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(line_item)
     db_session.commit()
@@ -328,7 +329,7 @@ def test_bc_no_access_without_line_items_or_creation(client, admin_user, regular
         description="BC with no access for regular user",
         status="Draft",
         created_by=admin_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(bc)
     db_session.commit()
@@ -361,14 +362,14 @@ def test_admin_sees_all_business_cases(client, admin_user, regular_user, admin_t
         description="Created by admin",
         status="Draft",
         created_by=admin_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     bc2 = BusinessCase(
         title="User BC",
         description="Created by regular user",
         status="Draft",
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(bc1)
     db_session.add(bc2)

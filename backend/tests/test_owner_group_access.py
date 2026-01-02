@@ -1,5 +1,6 @@
 import pytest
-from datetime import datetime
+
+from app.auth import now_utc
 
 
 def test_list_budget_items_filters_by_owner_group(client, admin_user, regular_user, user_token, test_group, db_session):
@@ -15,7 +16,7 @@ def test_list_budget_items_filters_by_owner_group(client, admin_user, regular_us
         fiscal_year=2025,
         owner_group_id=test_group.id,
         created_by=admin_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(budget1)
 
@@ -28,7 +29,7 @@ def test_list_budget_items_filters_by_owner_group(client, admin_user, regular_us
         fiscal_year=2025,
         owner_group_id=999,  # Group that regular_user is not member of
         created_by=admin_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(budget2)
     db_session.commit()
@@ -67,7 +68,7 @@ def test_user_in_owner_group_membership(client, regular_user, user_token, test_g
         fiscal_year=2025,
         owner_group_id=test_group.id,
         created_by=1,  # Some other user
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(budget)
     db_session.commit()
@@ -97,7 +98,7 @@ def test_creator_can_see_own_records_regardless_of_group(client, regular_user, u
         fiscal_year=2025,
         owner_group_id=999,  # Group regular_user is not member of
         created_by=regular_user.id,  # But they created it
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(budget)
     db_session.commit()
@@ -127,7 +128,7 @@ def test_admin_sees_all_records(client, admin_user, admin_token, test_group, db_
             fiscal_year=2025,
             owner_group_id=i + 1,  # Different groups
             created_by=1,
-            created_at=datetime.utcnow().isoformat()
+            created_at=now_utc()
         )
         db_session.add(budget)
     db_session.commit()
@@ -162,7 +163,7 @@ def test_list_line_items_filters_by_owner_group(client, regular_user, user_token
         fiscal_year=2025,
         owner_group_id=test_group.id,
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(budget)
 
@@ -172,7 +173,7 @@ def test_list_line_items_filters_by_owner_group(client, regular_user, user_token
         description="Test",
         status="Draft",
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(bc)
     db_session.commit()
@@ -189,7 +190,7 @@ def test_list_line_items_filters_by_owner_group(client, regular_user, user_token
         currency="USD",
         owner_group_id=test_group.id,
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(line_item)
     db_session.commit()
@@ -225,7 +226,7 @@ def test_list_wbs_filters_by_owner_group(client, regular_user, user_token, test_
         fiscal_year=2025,
         owner_group_id=test_group.id,
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(budget)
 
@@ -234,7 +235,7 @@ def test_list_wbs_filters_by_owner_group(client, regular_user, user_token, test_
         description="Test",
         status="Draft",
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(bc)
     db_session.commit()
@@ -250,7 +251,7 @@ def test_list_wbs_filters_by_owner_group(client, regular_user, user_token, test_
         currency="USD",
         owner_group_id=test_group.id,
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(line_item)
     db_session.commit()
@@ -263,7 +264,7 @@ def test_list_wbs_filters_by_owner_group(client, regular_user, user_token, test_
         description="Accessible WBS",
         owner_group_id=test_group.id,
         created_by=regular_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(wbs)
     db_session.commit()
@@ -292,7 +293,7 @@ def test_check_record_access_verifies_owner_group(client, admin_user, regular_us
         fiscal_year=2025,
         owner_group_id=999,  # Group that doesn't exist / user not member
         created_by=admin_user.id,  # Created by admin, not regular_user
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db_session.add(budget)
     db_session.commit()

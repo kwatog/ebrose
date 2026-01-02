@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, get_current_user, check_record_access, audit_log_change, user_in_owner_group
+from ..auth import get_db, get_current_user, check_record_access, audit_log_change, user_in_owner_group, now_utc
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
@@ -46,14 +45,14 @@ def get_accessible_asset_ids(db: Session, user: models.User) -> List[int]:
     user_access = db.query(models.RecordAccess).filter(
         models.RecordAccess.record_type == "Asset",
         models.RecordAccess.user_id == user.id,
-        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
     ).all()
     
     # Get group RecordAccess grants
     group_access = db.query(models.RecordAccess).filter(
         models.RecordAccess.record_type == "Asset",
         models.RecordAccess.group_id.in_(user_group_ids),
-        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
     ).all()
     
     # Combine all accessible IDs
@@ -106,7 +105,7 @@ def get_asset(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("Asset", "asset_id", "Read"))
 ):
-    asset = db.query(models.Asset).get(asset_id)
+    asset = db.get(models.Asset, asset_id)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
     return asset
@@ -142,7 +141,7 @@ async def create_asset(
                     (models.RecordAccess.group_id.in_(group_ids))
                 ),
                 models.RecordAccess.access_level.in_(["Write", "Full"]),
-                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+                (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
             ).first()
 
             if not wbs_access:
@@ -156,7 +155,7 @@ async def create_asset(
         **asset.model_dump(exclude={'owner_group_id'}),
         owner_group_id=wbs.owner_group_id,  # Inherit from parent
         created_by=current_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db.add(db_asset)
     db.commit()
@@ -173,7 +172,7 @@ async def update_asset(
     current_user: models.User = Depends(check_record_access("Asset", "asset_id", "Write"))
 ):
     """Update an existing asset."""
-    asset = db.query(models.Asset).get(asset_id)
+    asset = db.get(models.Asset, asset_id)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
 
@@ -182,7 +181,7 @@ async def update_asset(
     for k, v in data.items():
         setattr(asset, k, v)
     asset.updated_by = current_user.id
-    asset.updated_at = datetime.utcnow().isoformat()
+    asset.updated_at = now_utc()
 
     db.commit()
     db.refresh(asset)
@@ -196,7 +195,7 @@ async def delete_asset(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("Asset", "asset_id", "Full"))
 ):
-    asset = db.query(models.Asset).get(asset_id)
+    asset = db.get(models.Asset, asset_id)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
     db.delete(asset)

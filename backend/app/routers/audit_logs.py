@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, require_role
+from ..auth import get_db, require_role, now_utc
 
 router = APIRouter(prefix="/audit-logs", tags=["audit-logs"])
 

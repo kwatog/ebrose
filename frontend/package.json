@@ -13,14 +13,14 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@heroicons/vue": "^2.2.0",
-    "nuxt": "^4.0.0",
-    "vue": "^3.5.0"
+    "@heroicons/vue": "2.2.0",
+    "nuxt": "3.15.4",
+    "vue": "3.5.13"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
-    "@vue/test-utils": "^2.4.6",
-    "happy-dom": "^18.0.0",
-    "vitest": "^3.2.4"
+    "@playwright/test": "1.49.1",
+    "@vue/test-utils": "2.4.6",
+    "happy-dom": "18.0.1",
+    "vitest": "3.1.1"
   }
 }

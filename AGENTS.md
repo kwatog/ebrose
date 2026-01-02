@@ -484,3 +484,47 @@ The layout includes a fully responsive hamburger menu:
 - `screenshots/10-business-cases.png`
 - `screenshots/11-goods-receipts.png`
 - `screenshots/11b-goods-receipts-create-modal.png`
+
+## Pydantic v2 Migration ✅ (January 2026)
+
+Successfully migrated all code from Pydantic v1 to v2 APIs:
+
+| Deprecated API | Migration |
+|----------------|-----------|
+| `model.dict()` | `model.model_dump()` |
+| `model.json()` | `model.model_dump_json()` |
+| `from_orm()` | `model_validate()` |
+| `class Config:` | `model_config = ConfigDict(from_attributes=True)` |
+
+**Files Updated:**
+- `backend/app/schemas.py` - 14 Config blocks migrated to ConfigDict
+- `backend/app/routers/budget_items.py` - All 8 Pydantic API calls updated
+- `backend/app/routers/business_case_line_items.py` - All 8 Pydantic API calls updated
+
+**Test Results:** 43 passed, 2 skipped, 0 failures
+**Warnings Reduced:** From 51 to 22 (Starlette cookie deprecations only, no Pydantic warnings)
+
+## Additional Fixes ✅ (January 2026)
+
+| Issue | Fix |
+|-------|-----|
+| `datetime.utcnow()` deprecation | Created `now_utc()` helper using `datetime.now(timezone.utc).isoformat()` |
+| `db.query().get()` removal | Replaced with `db.get(Model, id)` |
+| `@app.on_event("startup")` deprecated | Converted to lifespan context manager |
+| Alerts access control | Added `can_user_access_record()` filtering |
+| `v-model.number` on ID fields | Changed to `v-model` for select fields |
+
+## Dependency Pinning ✅
+
+All dependencies now pinned to known-stable versions:
+
+| Package | Version |
+|---------|---------|
+| fastapi | 0.109.2 |
+| uvicorn | 0.27.1 |
+| pydantic | 2.9.2 |
+| sqlalchemy | 2.0.36 |
+| nuxt | 3.15.4 |
+| vue | 3.5.13 |
+| vitest | 3.1.1 |
+| playwright | 1.49.1 |

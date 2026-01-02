@@ -1,10 +1,13 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import os
+import logging
 
 from .database import Base, engine, SessionLocal
 from . import models, schemas, auth
+from .auth import now_utc
 from .routers import (
     auth as auth_router,
     users,
@@ -23,9 +26,53 @@ from .routers import (
     alerts
 )
 
-Base.metadata.create_all(bind=engine)
+logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Ebrose API", debug=True)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize database and create admin user
+    Base.metadata.create_all(bind=engine)
+    
+    # Initialize admin user from environment variables if no users exist
+    if os.getenv("CREATE_ADMIN_USER", "").lower() in ["true", "1", "yes"]:
+        db = SessionLocal()
+        try:
+            user_count = db.query(models.User).count()
+            if user_count == 0:
+                from .auth import get_password_hash
+                
+                # Get admin credentials from environment
+                admin_username = os.getenv("ADMIN_USERNAME", "admin")
+                admin_password = os.getenv("ADMIN_PASSWORD")
+                admin_email = os.getenv("ADMIN_EMAIL", "admin@ebrose.local")
+                admin_full_name = os.getenv("ADMIN_FULL_NAME", "System Administrator")
+                
+                if not admin_password:
+                    logger.error("ADMIN_PASSWORD environment variable required for admin creation")
+                elif len(admin_password) < 8:
+                    logger.error("ADMIN_PASSWORD must be at least 8 characters long")
+                else:
+                    admin_user = models.User(
+                        username=admin_username,
+                        email=admin_email,
+                        hashed_password=get_password_hash(admin_password),
+                        full_name=admin_full_name,
+                        role="Admin",
+                        created_at=now_utc()
+                    )
+                    db.add(admin_user)
+                    db.commit()
+                    logger.info(f"Admin user '{admin_username}' created successfully")
+        except Exception as e:
+            logger.error(f"Error creating admin user: {e}")
+        finally:
+            db.close()
+    
+    yield
+    # Shutdown: Cleanup if needed
+    pass
+
+app = FastAPI(title="Ebrose API", debug=True, lifespan=lifespan)
 
 # Enable CORS for frontend
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
@@ -69,48 +116,3 @@ app.include_router(goods_receipts.router)
 app.include_router(resources.router)
 app.include_router(allocations.router)
 app.include_router(alerts.router)
-
-# Initialize admin user from environment variables if no users exist
-@app.on_event("startup")
-def create_default_admin():
-    # Only create admin if explicitly enabled via environment
-    if not os.getenv("CREATE_ADMIN_USER", "").lower() in ["true", "1", "yes"]:
-        return
-    
-    db = SessionLocal()
-    try:
-        user_count = db.query(models.User).count()
-        if user_count == 0:
-            from datetime import datetime
-            from .auth import get_password_hash
-            
-            # Get admin credentials from environment
-            admin_username = os.getenv("ADMIN_USERNAME", "admin")
-            admin_password = os.getenv("ADMIN_PASSWORD")
-            admin_email = os.getenv("ADMIN_EMAIL", "admin@ebrose.local")
-            admin_full_name = os.getenv("ADMIN_FULL_NAME", "System Administrator")
-            
-            if not admin_password:
-                print("ERROR: ADMIN_PASSWORD environment variable required for admin creation")
-                return
-                
-            if len(admin_password) < 8:
-                print("ERROR: ADMIN_PASSWORD must be at least 8 characters long")
-                return
-            
-            admin_user = models.User(
-                username=admin_username,
-                email=admin_email,
-                hashed_password=get_password_hash(admin_password),
-                full_name=admin_full_name,
-                role="Admin",
-                created_at=datetime.utcnow().isoformat()
-            )
-            db.add(admin_user)
-            db.commit()
-            print(f"Admin user '{admin_username}' created successfully")
-            
-    except Exception as e:
-        print(f"Error creating admin user: {e}")
-    finally:
-        db.close()

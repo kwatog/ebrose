@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, get_current_user, check_record_access, audit_log_change
+from ..auth import get_db, get_current_user, check_record_access, audit_log_change, now_utc
 
 router = APIRouter(prefix="/resources", tags=["resources"])
 
@@ -34,13 +33,13 @@ def get_accessible_resource_ids(db: Session, user: models.User) -> List[int]:
     user_access = db.query(models.RecordAccess).filter(
         models.RecordAccess.record_type == "Resource",
         models.RecordAccess.user_id == user.id,
-        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
     ).all()
     
     group_access = db.query(models.RecordAccess).filter(
         models.RecordAccess.record_type == "Resource",
         models.RecordAccess.group_id.in_(user_group_ids),
-        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > datetime.utcnow().isoformat())
+        (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
     ).all()
     
     accessible_ids = set(owned_ids + created_ids)
@@ -87,7 +86,7 @@ def get_resource(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("Resource", "resource_id", "Read"))
 ):
-    resource = db.query(models.Resource).get(resource_id)
+    resource = db.get(models.Resource, resource_id)
     if not resource:
         raise HTTPException(status_code=404, detail="Resource not found")
     return resource
@@ -103,7 +102,7 @@ async def create_resource(
     db_resource = models.Resource(
         **resource.model_dump(),
         created_by=current_user.id,
-        created_at=datetime.utcnow().isoformat()
+        created_at=now_utc()
     )
     db.add(db_resource)
     db.commit()
@@ -120,7 +119,7 @@ async def update_resource(
     current_user: models.User = Depends(check_record_access("Resource", "resource_id", "Write"))
 ):
     """Update an existing resource."""
-    resource = db.query(models.Resource).get(resource_id)
+    resource = db.get(models.Resource, resource_id)
     if not resource:
         raise HTTPException(status_code=404, detail="Resource not found")
 
@@ -128,7 +127,7 @@ async def update_resource(
     for k, v in data.items():
         setattr(resource, k, v)
     resource.updated_by = current_user.id
-    resource.updated_at = datetime.utcnow().isoformat()
+    resource.updated_at = now_utc()
 
     db.commit()
     db.refresh(resource)
@@ -142,7 +141,7 @@ async def delete_resource(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("Resource", "resource_id", "Full"))
 ):
-    resource = db.query(models.Resource).get(resource_id)
+    resource = db.get(models.Resource, resource_id)
     if not resource:
         raise HTTPException(status_code=404, detail="Resource not found")
     db.delete(resource)

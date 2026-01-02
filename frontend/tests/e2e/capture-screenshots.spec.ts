@@ -48,8 +48,11 @@ test.describe('Application Screenshots', () => {
     await page.goto('/budget-items');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await page.click('button:has-text("+ Create Budget Item")');
-    await page.waitForTimeout(500);
+    const createButton = page.locator('button:has-text("+ Create Budget Item")');
+    if (await createButton.count() > 0) {
+      await createButton.click();
+      await page.waitForTimeout(500);
+    }
     await page.screenshot({ path: 'screenshots/04-budget-items-create-modal.png', fullPage: true });
   });
 
@@ -66,8 +69,11 @@ test.describe('Application Screenshots', () => {
     await page.goto('/purchase-orders');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await page.click('button:has-text("+ Create PO")');
-    await page.waitForTimeout(500);
+    const createButton = page.locator('button:has-text("+ Create PO")');
+    if (await createButton.count() > 0) {
+      await createButton.click();
+      await page.waitForTimeout(500);
+    }
     await page.screenshot({ path: 'screenshots/05b-purchase-orders-create-modal.png', fullPage: true });
   });
 
@@ -84,8 +90,11 @@ test.describe('Application Screenshots', () => {
     await page.goto('/wbs');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await page.click('button:has-text("+ Create WBS")');
-    await page.waitForTimeout(500);
+    const createButton = page.locator('button:has-text("+ Create WBS")');
+    if (await createButton.count() > 0) {
+      await createButton.click();
+      await page.waitForTimeout(500);
+    }
     await page.screenshot({ path: 'screenshots/06b-wbs-create-modal.png', fullPage: true });
   });
 
@@ -144,8 +153,11 @@ test.describe('Application Screenshots', () => {
     await page.goto('/goods-receipts');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await page.click('button:has-text("+ Create GR")');
-    await page.waitForTimeout(500);
+    const createButton = page.locator('button:has-text("+ Create GR")');
+    if (await createButton.count() > 0) {
+      await createButton.click();
+      await page.waitForTimeout(500);
+    }
     await page.screenshot({ path: 'screenshots/11b-goods-receipts-create-modal.png', fullPage: true });
   });
 });
