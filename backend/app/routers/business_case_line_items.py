@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
 
 from .. import models, schemas
 from ..database import SessionLocal
-from ..auth import get_current_user, require_role, now_utc
+from ..auth import get_current_user, require_role, check_record_access, audit_log_change, now_utc
 
 router = APIRouter(prefix="/business-case-line-items", tags=["business-case-line-items"])
 
@@ -25,7 +25,7 @@ def list_line_items(
     owner_group_id: int = None,
     spend_category: str = None,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(require_role("User"))
 ):
     """List all business case line items with pagination and filtering."""
     query = db.query(models.BusinessCaseLineItem)
@@ -76,7 +76,7 @@ def list_line_items(
 def get_line_item(
     id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(check_record_access("BusinessCaseLineItem", "id", "Read"))
 ):
     """Get a specific business case line item by ID."""
     line_item = db.get(models.BusinessCaseLineItem, id)
@@ -89,7 +89,7 @@ def get_line_item(
 def create_line_item(
     line_item: schemas.BusinessCaseLineItemCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(require_role("User"))
 ):
     """Create a new business case line item."""
     # Verify business case exists
@@ -132,7 +132,7 @@ def update_line_item(
     id: int,
     line_item_update: schemas.BusinessCaseLineItemUpdate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(check_record_access("BusinessCaseLineItem", "id", "Write"))
 ):
     """Update an existing business case line item."""
     db_line_item = db.get(models.BusinessCaseLineItem, id)

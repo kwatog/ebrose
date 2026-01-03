@@ -38,8 +38,15 @@ const login = async () => {
     })
     
     const userCookie = useCookie('user_info')
-    const decoded = decodeUserInfo(userCookie.value)
-    userCookie.value = decoded || response.user
+    // Cookie may already be set by backend as base64, or response contains user object
+    let userData = response.user
+    if (userCookie.value && typeof userCookie.value === 'object') {
+      userData = userCookie.value
+    } else if (userCookie.value) {
+      const decoded = decodeUserInfo(userCookie.value)
+      if (decoded) userData = decoded
+    }
+    userCookie.value = userData
     
     success('Login successful!')
     await navigateTo('/')
