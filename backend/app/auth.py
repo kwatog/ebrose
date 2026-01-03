@@ -67,8 +67,16 @@ def check_business_case_access(user: "models.User", business_case: "models.Busin
     2. Line-item based access (PRIMARY): Access via budget items linked through line items
     3. lead_group_id access: If BC has lead_group_id, user must be member for Write access
     4. Explicit RecordAccess (OVERRIDE): Direct grants for audits/reviews
+
+    Role caps: Viewer cannot Write regardless of grants
     """
     access_levels = {"Read": 0, "Write": 1, "Full": 2}
+    role_caps = {"Viewer": 0, "User": 1, "Manager": 2, "Admin": 2}
+
+    # CRITICAL: Enforce role caps - Viewer cannot Write regardless of grants
+    if access_levels.get(required_level, 2) > role_caps.get(user.role, 0):
+        return False
+
     user_group_ids = [
         m.group_id
         for m in db.query(models.UserGroupMembership).filter(
@@ -332,7 +340,21 @@ def audit_log_change(action: str, table_name: str):
                 # Try to extract record_id from kwargs
                 record_id = kwargs.get('id') or kwargs.get(f'{table_name}_id') or kwargs.get('bc_id') or kwargs.get('wbs_id') or kwargs.get('po_id') or kwargs.get('asset_id') or kwargs.get('gr_id') or kwargs.get('resource_id') or kwargs.get('alloc_id')
                 if record_id and db:
-                    model_cls = getattr(models, table_name.title().replace('_', ''), None)
+                    # Fix class name lookup for snake_case table names (e.g., resource_po_allocation)
+                    table_name_map = {
+                        "resource_po_allocation": "ResourcePOAllocation",
+                        "business_case_line_item": "BusinessCaseLineItem",
+                        "user_group_membership": "UserGroupMembership",
+                        "goods_receipt": "GoodsReceipt",
+                        "purchase_order": "PurchaseOrder",
+                        "business_case": "BusinessCase",
+                        "budget_item": "BudgetItem",
+                        "user_group": "UserGroup",
+                        "record_access": "RecordAccess",
+                        "audit_log": "AuditLog"
+                    }
+                    model_name = table_name_map.get(table_name, table_name.title().replace('_', ''))
+                    model_cls = getattr(models, model_name, None)
                     if model_cls:
                         record = db.get(model_cls, record_id)
                         if record and hasattr(record, '__dict__'):

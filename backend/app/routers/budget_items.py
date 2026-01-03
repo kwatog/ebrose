@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
 
 from .. import models, schemas
 from ..database import SessionLocal
-from ..auth import get_current_user, require_role, check_record_access, now_utc
+from ..auth import get_current_user, require_role, check_record_access, audit_log_change, now_utc
 
 router = APIRouter(prefix="/budget-items", tags=["budget-items"])
 
@@ -85,12 +85,13 @@ def get_budget_item(
 
 
 @router.post("/", response_model=schemas.BudgetItem)
-def create_budget_item(
+async def create_budget_item(
     budget_item: schemas.BudgetItemCreate,
+    request: Request,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(require_role("User"))
 ):
-    """Create a new budget item."""
+    """Create a new budget item (User+ only)."""
     # Check if workday_ref already exists
     existing = db.query(models.BudgetItem).filter(
         models.BudgetItem.workday_ref == budget_item.workday_ref

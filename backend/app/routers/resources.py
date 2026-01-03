@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, get_current_user, check_record_access, audit_log_change, now_utc
+from ..auth import get_db, get_current_user, check_record_access, audit_log_change, require_role, now_utc
 
 router = APIRouter(prefix="/resources", tags=["resources"])
 
@@ -56,7 +56,7 @@ def list_resources(
     status: Optional[str] = None,
     vendor: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(require_role("User"))
 ):
     """List all resources with pagination and filtering.
     
@@ -97,7 +97,7 @@ async def create_resource(
     resource: schemas.ResourceCreate, 
     request: Request,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(require_role("User"))
 ):
     db_resource = models.Resource(
         **resource.model_dump(),

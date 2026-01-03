@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from ..database import SessionLocal
 from .. import models, schemas
-from ..auth import get_db, get_current_user, check_record_access, audit_log_change, now_utc
+from ..auth import get_db, get_current_user, check_record_access, audit_log_change, require_role, now_utc
 
 router = APIRouter(prefix="/business-cases", tags=["business-cases"])
 
@@ -14,7 +14,7 @@ def list_business_cases(
     status: str = None,
     requestor: str = None,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(require_role("User"))
 ):
     """List all business cases with pagination and filtering - implements hybrid access control."""
     from app.auth import check_business_case_access
@@ -49,7 +49,7 @@ def list_business_cases(
 def get_business_case(
     bc_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(require_role("User"))
 ):
     """Get a specific business case - uses hybrid access control."""
     from app.auth import check_business_case_access
@@ -71,7 +71,7 @@ async def create_business_case(
     bc: schemas.BusinessCaseCreate, 
     request: Request,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(require_role("User"))
 ):
     db_bc = models.BusinessCase(
         **bc.model_dump(),
@@ -87,8 +87,9 @@ async def create_business_case(
 async def update_business_case(
     bc_id: int,
     bc_update: schemas.BusinessCaseUpdate,
+    request: Request,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(require_role("User"))
 ):
     """Update a business case with validation for status transitions."""
     from app.auth import check_business_case_access
@@ -127,12 +128,11 @@ async def update_business_case(
     return bc
 
 @router.delete("/{bc_id}")
-@audit_log_change(action="DELETE", table_name="business_case")
 async def delete_business_case(
     bc_id: int,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(require_role("User"))
 ):
     """Delete a business case - uses hybrid access control."""
     bc = db.get(models.BusinessCase, bc_id)
