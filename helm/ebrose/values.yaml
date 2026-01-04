@@ -1,5 +1,6 @@
 # Default values for ebrose
 # This is a YAML-formatted file.
+# For single-replica K8s deployment, use: helm install ebrose ./helm/ebrose -f ./helm/ebrose/values.yaml
 
 global:
   imageRegistry: ""
@@ -11,7 +12,7 @@ fullnameOverride: ""
 # Backend configuration
 backend:
   enabled: true
-  replicaCount: 2
+  replicaCount: 1  # Single replica for K8s (SQLite requires single instance)
   
   image:
     registry: docker.io
@@ -63,19 +64,30 @@ backend:
       
   autoscaling:
     enabled: false
-    minReplicas: 2
-    maxReplicas: 10
+    minReplicas: 1
+    maxReplicas: 5
     targetCPUUtilizationPercentage: 80
     
   nodeSelector: {}
   tolerations: []
   affinity: {}
   
-  # Environment variables
+  # Environment variables (use K8s secrets for sensitive values)
   env:
     DATABASE_URL: "sqlite:///./data/ebrose.db"
     SECRET_KEY: "change-this-secret-key-for-production"
     ACCESS_TOKEN_EXPIRE_MINUTES: "1440"
+    LOG_LEVEL: "INFO"
+    ENVIRONMENT: "production"
+    
+  # Required secrets (set via K8s secrets, not in values.yaml)
+  # - ADMIN_PASSWORD: Admin user password
+  # - ADMIN_USERNAME: Admin username (default: admin)
+  # - ADMIN_EMAIL: Admin email (default: admin@ebrose.local)
+  # - ADMIN_FULL_NAME: Admin full name (default: System Administrator)
+  secrets:
+    enabled: false
+    # secretName: ebrose-secrets
     
   # CORS allowed origins (list format)
   corsOrigins:
@@ -102,7 +114,7 @@ backend:
 # Frontend configuration  
 frontend:
   enabled: true
-  replicaCount: 2
+  replicaCount: 1  # Single replica for K8s
   
   image:
     registry: docker.io
@@ -154,8 +166,8 @@ frontend:
       
   autoscaling:
     enabled: false
-    minReplicas: 2
-    maxReplicas: 10
+    minReplicas: 1
+    maxReplicas: 5
     targetCPUUtilizationPercentage: 80
     
   nodeSelector: {}

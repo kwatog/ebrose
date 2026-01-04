@@ -27,20 +27,39 @@ from .routers import (
     alerts
 )
 
-# Configure logging
+# Configure logging - logs to stdout for K8s log collection
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 logging.basicConfig(
     level=LOG_LEVEL,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler()
-    ]
+    handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
+
+def run_migrations():
+    """Run Alembic migrations on startup."""
+    try:
+        from alembic.config import Config
+        from alembic import command
+        
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Database migrations applied successfully")
+    except Exception as e:
+        logger.error(f"Error running migrations: {e}")
+        raise
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Initialize database and create admin user
+    # Startup: Run migrations first
+    logger.info("Starting Ebrose application...")
+    
+    # Run Alembic migrations
+    run_migrations()
+    
+    # Create tables (for any new models since last migration)
     Base.metadata.create_all(bind=engine)
     
     # Initialize admin user from environment variables if no users exist
@@ -78,8 +97,12 @@ async def lifespan(app: FastAPI):
         finally:
             db.close()
     
+    logger.info("Ebrose application started successfully")
+    
     yield
-    # Shutdown: Cleanup if needed
+    
+    # Shutdown
+    logger.info("Shutting down Ebrose application...")
     pass
 
 app = FastAPI(title="Ebrose API", debug=True, lifespan=lifespan)
@@ -107,9 +130,27 @@ def get_db():
     finally:
         db.close()
 
+from sqlalchemy import text
+
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "ebrose"}
+    """Health check endpoint for K8s liveness/readiness probes."""
+    try:
+        # Check database connectivity
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        db_status = "healthy"
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {"status": "unhealthy", "service": "ebrose", "database": "unhealthy", "error": str(e)}
+    
+    return {
+        "status": "healthy", 
+        "service": "ebrose", 
+        "database": db_status,
+        "environment": os.getenv("ENVIRONMENT", "development")
+    }
 
 app.include_router(auth_router.router)
 app.include_router(users.router)

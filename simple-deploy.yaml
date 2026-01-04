@@ -49,6 +49,10 @@ spec:
           value: "admin"
         - name: ADMIN_PASSWORD
           value: "Admin123!"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: ENVIRONMENT
+          value: "production"
         resources:
           requests:
             memory: "256Mi"
