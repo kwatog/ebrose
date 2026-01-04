@@ -6,6 +6,7 @@ httpx>=0.25.0,<0.28.0
 
 # Database
 sqlalchemy==2.0.36
+alembic==1.14.0
 
 # Authentication
 python-jose[cryptography]==3.3.0

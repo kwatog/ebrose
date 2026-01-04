@@ -1,6 +1,6 @@
 from decimal import Decimal
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, Boolean, Numeric, DateTime
+from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, Boolean, Numeric, DateTime, UniqueConstraint, CheckConstraint
 from sqlalchemy.orm import relationship, column_property
 from .database import Base
 
@@ -48,6 +48,10 @@ class UserGroupMembership(Base):
     added_by = Column(Integer, ForeignKey("user.id"))
     added_at = Column(DateTime(timezone=True))
 
+    __table_args__ = (
+        UniqueConstraint('user_id', 'group_id', name='uq_user_group_membership'),
+    )
+
 
 class RecordAccess(Base):
     __tablename__ = "record_access"
@@ -63,6 +67,10 @@ class RecordAccess(Base):
     expires_at = Column(DateTime(timezone=True), nullable=True)
     updated_by = Column(Integer, ForeignKey("user.id"), nullable=True)
     updated_at = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        CheckConstraint('user_id IS NOT NULL OR group_id IS NOT NULL', name='ck_record_access_user_or_group'),
+    )
 
 
 class AuditLog(Base):

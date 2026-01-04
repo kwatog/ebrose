@@ -1,6 +1,6 @@
 # Ebrose Implementation Plan
 
-**Last Updated:** January 4, 2026
+**Last Updated:** January 5, 2026
 
 Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in `requirements-codex.md`, this plan tracks the implementation progress from MVP to production-ready state.
 
@@ -10,6 +10,7 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
 - **22 router files** with ~2,400 lines of code
 - **56 tests** (54 passed, 2 skipped)
 - **All dependencies pinned** ✅
+- **Alembic migrations** set up ✅
 
 ### Frontend (Nuxt 4)
 - **15 pages** with ~6,500 lines of Vue code
@@ -19,21 +20,18 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
 ### Database
 - **16 models** with proper relationships
 - **All DateTime columns** using timezone-aware types
-- **No Alembic migrations** yet
+- **2 migrations applied** (initial + constraints)
+- **Database constraints** in place ✅
 
 ---
-
 
 ## 🎯 Priority Order
 
-### 1. Production Readiness (Next)
-- [ ] Setup Alembic migrations
-- [ ] Add missing database constraints
-- [ ] Add frontend password strength to registration
-- [ ] Configure production CORS/logging
+### Next Steps
+- [ ] Add more Alembic migrations for future schema changes
+- [ ] Document deployment procedures
 
 ---
-
 
 ## ✅ Completed Items (Jan 2, 2026)
 
@@ -96,3 +94,28 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
 - [x] Made corporate certificate optional for cross-machine compatibility
 - [x] access-control-ui.spec.ts has 8 comprehensive scenarios
 - [x] Tests use proper Playwright patterns (selectors, assertions, timeouts)
+
+## ✅ Completed Items (Jan 5, 2026 - Production Readiness)
+
+### Database Migrations
+- [x] Initialized Alembic migrations framework
+- [x] Created alembic.ini with SQLite configuration
+- [x] Updated migrations/env.py to use app models
+- [x] Generated initial migration (2013b83a9ede)
+- [x] Added alembic to requirements.txt
+
+### Database Constraints
+- [x] Added UniqueConstraint on user_group_membership (user_id, group_id)
+- [x] Added CheckConstraint on record_access (user_id OR group_id required)
+- [x] Created migration for constraints (ab4473431e71)
+- [x] Applied migrations to database
+
+### Password Strength UI
+- [x] PasswordStrength component exists and functional
+- [x] Used in profile page for password changes
+- [x] Shows strength indicator and requirements
+
+### Logging Configuration
+- [x] Configured basic logging in main.py
+- [x] Added LOG_LEVEL environment variable support
+- [x] Added console handler with timestamp format
