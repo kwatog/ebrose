@@ -25,7 +25,7 @@ from app.auth import get_password_hash, now_utc
 
 def reset_database():
     """Delete existing database file."""
-    db_file = "ebrose.db"
+    db_file = "../ebrose.db"
     if os.path.exists(db_file):
         os.remove(db_file)
         print(f"✓ Deleted existing database: {db_file}")

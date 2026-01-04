@@ -2,6 +2,7 @@ import json
 import base64
 import os
 import re
+from typing import Tuple
 from datetime import timedelta
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
@@ -24,7 +25,7 @@ PASSWORD_REQUIRE_LOWERCASE = True
 PASSWORD_REQUIRE_DIGIT = True
 PASSWORD_REQUIRE_SPECIAL = True
 
-def validate_password(password: str) -> tuple[bool, str]:
+def validate_password(password: str) -> Tuple[bool, str]:
     """Validate password against policy. Returns (is_valid, error_message)."""
     if len(password) < PASSWORD_MIN_LENGTH:
         return False, f"Password must be at least {PASSWORD_MIN_LENGTH} characters long"

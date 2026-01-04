@@ -170,10 +170,20 @@ echo ""
 
 cd "$FRONTEND_DIR"
 
+# Build docker/podman command dynamically with optional certificate mount
+CERT_FILE="$HOME/.certs/starhub-root-ca.crt"
+CERT_MOUNT=""
+
+if [ -f "$CERT_FILE" ]; then
+    echo "📜 Found corporate certificate, will mount for corporate network access"
+    CERT_MOUNT="-v $CERT_FILE:/usr/local/share/ca-certificates/starhub-root-ca.crt:ro,z"
+fi
+
 # Run Playwright in container
 $CONTAINER_CMD run --rm \
   -v "$FRONTEND_DIR:/work:z" \
-  -v "$HOME/.certs/starhub-root-ca.crt:/usr/local/share/ca-certificates/starhub-root-ca.crt:ro,z" \
+  -v "$BACKEND_DIR:/work/backend:z" \
+  $CERT_MOUNT \
   -w /work \
   --ipc=host \
   -e CI=true \
@@ -181,9 +191,11 @@ $CONTAINER_CMD run --rm \
   mcr.microsoft.com/playwright:v1.57.0-jammy \
   /bin/bash -c "
     set -e
-    echo '🔐 Installing corporate certificate...'
-    update-ca-certificates 2>/dev/null || true
-    echo '✅ Certificate installed'
+    if [ -f /usr/local/share/ca-certificates/starhub-root-ca.crt ]; then
+        echo '🔐 Installing corporate certificate...'
+        update-ca-certificates 2>/dev/null || true
+        echo '✅ Certificate installed'
+    fi
     echo ''
     echo '📦 Installing dependencies...'
     npm install --silent 2>/dev/null
