@@ -135,13 +135,6 @@ app.add_middleware(
     allow_headers=settings.cors_allow_headers,
 )
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 from sqlalchemy import text
 
 @app.get("/health")

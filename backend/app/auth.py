@@ -28,12 +28,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds
 # We use OAuth2PasswordBearer for Swagger UI compatibility, but logic allows custom header too
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+from app.database import get_db
+
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)

@@ -3,18 +3,10 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from .. import models, schemas
-from ..database import SessionLocal
+from ..database import SessionLocal, get_db
 from ..auth import get_current_user, require_role, check_record_access, audit_log_change, now_utc
 
 router = APIRouter(prefix="/business-case-line-items", tags=["business-case-line-items"])
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.get("/", response_model=List[schemas.BusinessCaseLineItem])

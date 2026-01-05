@@ -31,29 +31,19 @@ def db_session():
 
 @pytest.fixture(scope="function")
 def client(db_session):
-    """Create a test client with database override."""
     def override_get_db():
         try:
             yield db_session
         finally:
-            pass  # Don't close the session here, let the db_session fixture handle it
+            pass
 
-    # Import all the get_db functions used across the app
-    from app.auth import get_db as auth_get_db
-    from app.main import get_db as main_get_db
-    from app.routers.budget_items import get_db as budget_get_db
-    from app.routers.business_case_line_items import get_db as line_items_get_db
+    from app.database import get_db
 
-    # Override ALL get_db dependencies with our test session
-    app.main.app.dependency_overrides[auth_get_db] = override_get_db
-    app.main.app.dependency_overrides[main_get_db] = override_get_db
-    app.main.app.dependency_overrides[budget_get_db] = override_get_db
-    app.main.app.dependency_overrides[line_items_get_db] = override_get_db
+    app.main.app.dependency_overrides[get_db] = override_get_db
 
     with TestClient(app.main.app) as test_client:
         yield test_client
 
-    # Clean up
     app.main.app.dependency_overrides.clear()
 
 
