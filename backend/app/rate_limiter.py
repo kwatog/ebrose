@@ -122,10 +122,12 @@ def _get_global_ip_rate_limiter() -> RateLimiter:
 def login_rate_limiter_check(key: str, client_ip: str) -> None:
     from .config import get_settings
     settings = get_settings()
-    if not settings.rate_limit_enabled:
-        return
-    
     global _login_rate_limiter, _global_ip_rate_limiter
+    
+    if not settings.rate_limit_enabled:
+        _login_rate_limiter = None
+        _global_ip_rate_limiter = None
+        return
     
     if _global_ip_rate_limiter is None:
         _global_ip_rate_limiter = _get_global_ip_rate_limiter()
