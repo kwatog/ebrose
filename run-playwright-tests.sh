@@ -205,7 +205,7 @@ $CONTAINER_CMD run --rm \
     echo '✅ Dependencies installed'
     echo ''
     echo '🧪 Running UI tests (using pre-installed Chromium)...'
-    npx playwright test tests/e2e/ --reporter=list --project=chromium
+    npx playwright test tests/e2e/ --reporter=list
   "
 
 RESULT=$?
