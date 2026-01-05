@@ -174,21 +174,24 @@ cd "$FRONTEND_DIR"
 CERT_FILE="$HOME/.certs/starhub-root-ca.crt"
 CERT_MOUNT=""
 
+# Get the host IP for the container to reach host services
+HOST_IP="host.docker.internal"
+
 if [ -f "$CERT_FILE" ]; then
     echo "📜 Found corporate certificate, will mount for corporate network access"
     CERT_MOUNT="-v $CERT_FILE:/usr/local/share/ca-certificates/starhub-root-ca.crt:ro,z"
 fi
 
-# Run Playwright in container
+# Run Playwright in container with host network for Linux
 $CONTAINER_CMD run --rm \
   -v "$FRONTEND_DIR:/work:z" \
   -v "$BACKEND_DIR:/work/backend:z" \
   $CERT_MOUNT \
+  --network host \
   -w /work \
-  --ipc=host \
   -e CI=true \
-  -e BASE_URL=http://host.docker.internal:3000 \
-  mcr.microsoft.com/playwright:v1.57.0-jammy \
+  -e BASE_URL=http://127.0.0.1:3000 \
+  mcr.microsoft.com/playwright:v1.49.1-jammy \
   /bin/bash -c "
     set -e
     if [ -f /usr/local/share/ca-certificates/starhub-root-ca.crt ]; then
