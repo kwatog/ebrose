@@ -354,7 +354,7 @@ const isManager = computed(() => {
 
 .error-container {
   padding: var(--spacing-6);
-  background: #fee;
+  background: var(--color-error-bg);
   border-radius: var(--radius-lg);
 }
 
@@ -395,23 +395,23 @@ const isManager = computed(() => {
 }
 
 .stat-icon-primary {
-  background: #e0e7ff;
+  background: var(--color-info-bg);
 }
 
 .stat-icon-warning {
-  background: #fef3c7;
+  background: var(--color-warning-bg);
 }
 
 .stat-icon-info {
-  background: #dbeafe;
+  background: var(--color-primary-bg);
 }
 
 .stat-icon-success {
-  background: #d1fae5;
+  background: var(--color-success-bg);
 }
 
 .stat-icon-secondary {
-  background: #fce7f3;
+  background: var(--color-secondary-bg);
 }
 
 .stat-details {

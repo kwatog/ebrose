@@ -35,9 +35,39 @@ const decodeUserInfo = (value: string | null | object): any => {
 const user = ref(decodeUserInfo(userCookie.value))
 const mobileMenuOpen = ref(false)
 
+// Dropdown state for accessibility
+const financeDropdownOpen = ref(false)
+const projectsDropdownOpen = ref(false)
+const adminDropdownOpen = ref(false)
+
 watch(userCookie, (newVal) => {
   user.value = decodeUserInfo(newVal)
 })
+
+// Dropdown toggle functions
+const toggleFinanceDropdown = () => {
+  financeDropdownOpen.value = !financeDropdownOpen.value
+  projectsDropdownOpen.value = false
+  adminDropdownOpen.value = false
+}
+
+const toggleProjectsDropdown = () => {
+  projectsDropdownOpen.value = !projectsDropdownOpen.value
+  financeDropdownOpen.value = false
+  adminDropdownOpen.value = false
+}
+
+const toggleAdminDropdown = () => {
+  adminDropdownOpen.value = !adminDropdownOpen.value
+  financeDropdownOpen.value = false
+  projectsDropdownOpen.value = false
+}
+
+const closeAllDropdowns = () => {
+  financeDropdownOpen.value = false
+  projectsDropdownOpen.value = false
+  adminDropdownOpen.value = false
+}
 
 const logout = async () => {
   tokenCookie.value = null
@@ -64,6 +94,9 @@ const closeMobileMenu = () => {
 
 <template>
   <div>
+    <!-- Skip to main content link for keyboard users -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
     <header class="header" v-if="$route.path !== '/login'">
       <div class="header-left">
         <NuxtLink to="/" class="logo" @click="closeMobileMenu">
@@ -91,29 +124,53 @@ const closeMobileMenu = () => {
           </NuxtLink>
 
           <div class="nav-dropdown">
-            <button class="nav-link nav-dropdown-trigger">
+            <button
+              class="nav-link nav-dropdown-trigger"
+              :aria-expanded="financeDropdownOpen"
+              aria-haspopup="true"
+              aria-controls="finance-menu"
+              @click="toggleFinanceDropdown"
+              @keydown.escape="closeAllDropdowns"
+            >
               <CurrencyDollarIcon class="nav-icon-svg" aria-hidden="true" />
               <span class="nav-label">Finance</span>
               <ChevronDownIcon class="nav-arrow-svg" aria-hidden="true" />
             </button>
-            <div class="nav-dropdown-menu">
-              <NuxtLink to="/budget-items" class="nav-dropdown-item" @click="closeMobileMenu">Budget Items</NuxtLink>
-              <NuxtLink to="/business-cases" class="nav-dropdown-item" @click="closeMobileMenu">Business Cases</NuxtLink>
-              <NuxtLink to="/line-items" class="nav-dropdown-item" @click="closeMobileMenu">Line Items</NuxtLink>
+            <div
+              id="finance-menu"
+              class="nav-dropdown-menu"
+              :class="{ 'is-visible': financeDropdownOpen }"
+              role="menu"
+            >
+              <NuxtLink to="/budget-items" class="nav-dropdown-item" @click="closeMobileMenu" role="menuitem">Budget Items</NuxtLink>
+              <NuxtLink to="/business-cases" class="nav-dropdown-item" @click="closeMobileMenu" role="menuitem">Business Cases</NuxtLink>
+              <NuxtLink to="/line-items" class="nav-dropdown-item" @click="closeMobileMenu" role="menuitem">Line Items</NuxtLink>
             </div>
           </div>
 
           <div class="nav-dropdown">
-            <button class="nav-link nav-dropdown-trigger">
+            <button
+              class="nav-link nav-dropdown-trigger"
+              :aria-expanded="projectsDropdownOpen"
+              aria-haspopup="true"
+              aria-controls="projects-menu"
+              @click="toggleProjectsDropdown"
+              @keydown.escape="closeAllDropdowns"
+            >
               <FolderIcon class="nav-icon-svg" aria-hidden="true" />
               <span class="nav-label">Projects</span>
               <ChevronDownIcon class="nav-arrow-svg" aria-hidden="true" />
             </button>
-            <div class="nav-dropdown-menu">
-              <NuxtLink to="/wbs" class="nav-dropdown-item" @click="closeMobileMenu">WBS</NuxtLink>
-              <NuxtLink to="/assets" class="nav-dropdown-item" @click="closeMobileMenu">Assets</NuxtLink>
-              <NuxtLink to="/purchase-orders" class="nav-dropdown-item" @click="closeMobileMenu">Purchase Orders</NuxtLink>
-              <NuxtLink to="/goods-receipts" class="nav-dropdown-item" @click="closeMobileMenu">Goods Receipts</NuxtLink>
+            <div
+              id="projects-menu"
+              class="nav-dropdown-menu"
+              :class="{ 'is-visible': projectsDropdownOpen }"
+              role="menu"
+            >
+              <NuxtLink to="/wbs" class="nav-dropdown-item" @click="closeMobileMenu" role="menuitem">WBS</NuxtLink>
+              <NuxtLink to="/assets" class="nav-dropdown-item" @click="closeMobileMenu" role="menuitem">Assets</NuxtLink>
+              <NuxtLink to="/purchase-orders" class="nav-dropdown-item" @click="closeMobileMenu" role="menuitem">Purchase Orders</NuxtLink>
+              <NuxtLink to="/goods-receipts" class="nav-dropdown-item" @click="closeMobileMenu" role="menuitem">Goods Receipts</NuxtLink>
             </div>
           </div>
 
@@ -128,20 +185,32 @@ const closeMobileMenu = () => {
           </NuxtLink>
         </div>
 
-        <div class="nav-section nav-section-right">
-          <template v-if="isAdminOrManager">
-            <div class="nav-dropdown">
-              <button class="nav-link nav-dropdown-trigger admin-trigger">
-                <Cog6ToothIcon class="nav-icon-svg" aria-hidden="true" />
-                <span class="nav-label">Admin</span>
-                <ChevronDownIcon class="nav-arrow-svg" aria-hidden="true" />
-              </button>
-              <div class="nav-dropdown-menu nav-dropdown-right">
-                <NuxtLink to="/admin/groups" class="nav-dropdown-item" @click="closeMobileMenu">User Groups</NuxtLink>
-                <NuxtLink to="/admin/audit" class="nav-dropdown-item" @click="closeMobileMenu">Audit Logs</NuxtLink>
+          <div class="nav-section nav-section-right">
+            <template v-if="isAdminOrManager">
+              <div class="nav-dropdown">
+                <button
+                  class="nav-link nav-dropdown-trigger admin-trigger"
+                  :aria-expanded="adminDropdownOpen"
+                  aria-haspopup="true"
+                  aria-controls="admin-menu"
+                  @click="toggleAdminDropdown"
+                  @keydown.escape="closeAllDropdowns"
+                >
+                  <Cog6ToothIcon class="nav-icon-svg" aria-hidden="true" />
+                  <span class="nav-label">Admin</span>
+                  <ChevronDownIcon class="nav-arrow-svg" aria-hidden="true" />
+                </button>
+                <div
+                  id="admin-menu"
+                  class="nav-dropdown-menu nav-dropdown-right"
+                  :class="{ 'is-visible': adminDropdownOpen }"
+                  role="menu"
+                >
+                  <NuxtLink to="/admin/groups" class="nav-dropdown-item" @click="closeMobileMenu" role="menuitem">User Groups</NuxtLink>
+                  <NuxtLink to="/admin/audit" class="nav-dropdown-item" @click="closeMobileMenu" role="menuitem">Audit Logs</NuxtLink>
+                </div>
               </div>
-            </div>
-          </template>
+            </template>
 
           <div class="user-section">
             <div class="user-avatar">{{ user?.username?.charAt(0)?.toUpperCase() || '?' }}</div>
@@ -156,13 +225,36 @@ const closeMobileMenu = () => {
         </div>
       </nav>
     </header>
-    <main class="main-container">
+    <main id="main-content" class="main-container">
       <slot />
     </main>
   </div>
 </template>
 
 <style scoped>
+/* Skip to content link for keyboard accessibility */
+.skip-link {
+  position: absolute;
+  top: -50px;
+  left: var(--spacing-4);
+  background: var(--color-primary);
+  color: white;
+  padding: var(--spacing-3) var(--spacing-5);
+  border-radius: var(--radius-lg);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  z-index: 9999;
+  transition: top var(--transition-fast);
+  box-shadow: var(--shadow-md);
+}
+
+.skip-link:focus {
+  top: var(--spacing-4);
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
 .header {
   background: white;
   border-bottom: 1px solid var(--color-gray-200);
@@ -289,8 +381,8 @@ const closeMobileMenu = () => {
 }
 
 .nav-link.active {
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--color-primary-bg);
+  color: var(--color-info);
 }
 
 .nav-icon-svg {
@@ -324,7 +416,8 @@ const closeMobileMenu = () => {
   gap: var(--spacing-2);
 }
 
-.nav-dropdown:hover .nav-arrow-svg {
+.nav-dropdown:hover .nav-arrow-svg,
+.nav-dropdown:has(.nav-dropdown-trigger[aria-expanded="true"]) .nav-arrow-svg {
   transform: rotate(180deg);
 }
 
@@ -346,7 +439,8 @@ const closeMobileMenu = () => {
 }
 
 .nav-dropdown:hover .nav-dropdown-menu,
-.nav-dropdown-trigger:focus + .nav-dropdown-menu {
+.nav-dropdown-trigger:focus + .nav-dropdown-menu,
+.nav-dropdown-menu.is-visible {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -426,8 +520,8 @@ const closeMobileMenu = () => {
 }
 
 .logout-btn:hover {
-  background: #fee2e2;
-  color: #dc2626;
+  background: var(--color-error-bg);
+  color: var(--color-error);
 }
 
 /* Desktop: Show labels */

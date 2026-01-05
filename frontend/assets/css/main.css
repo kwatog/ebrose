@@ -9,10 +9,50 @@
   --color-primary-dark: #16A34A;
 
   /* Semantic Colors */
+
+  /* Semantic Background Colors */
+  --color-primary-bg: #dbeafe;
+  --color-success-bg: #d1fae5;
+  --color-warning-bg: #fef3c7;
+  --color-error-bg: #fee2e2;
+  --color-info-bg: #e0e7ff;
+  --color-secondary-bg: #fce7f3;
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-info: #3b82f6;
+
+  /* Semantic Background Colors */
+  --color-primary-bg: #dbeafe;
+  --color-success-bg: #d1fae5;
+  --color-warning-bg: #fef3c7;
+  --color-error-bg: #fee2e2;
+  --color-info-bg: #e0e7ff;
+  --color-secondary-bg: #fce7f3;
+
+  /* Semantic Background Colors */
+  --color-primary-bg: #dbeafe;
+  --color-success-bg: #d1fae5;
+  --color-warning-bg: #fef3c7;
+  --color-error-bg: #fee2e2;
+  --color-info-bg: #e0e7ff;
+  --color-secondary-bg: #fce7f3;
+
+  /* Semantic Background Colors */
+  --color-primary-bg: #dbeafe;
+  --color-success-bg: #d1fae5;
+  --color-warning-bg: #fef3c7;
+  --color-error-bg: #fee2e2;
+  --color-info-bg: #e0e7ff;
+  --color-secondary-bg: #fce7f3;
+
+  /* Semantic Background Colors */
+  --color-primary-bg: #dbeafe;
+  --color-success-bg: #d1fae5;
+  --color-warning-bg: #fef3c7;
+  --color-error-bg: #fee2e2;
+  --color-info-bg: #e0e7ff;
+  --color-secondary-bg: #fce7f3;
 
   /* Neutral Grays */
   --color-gray-50: #f9fafb;

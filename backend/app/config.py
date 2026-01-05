@@ -38,6 +38,19 @@ def _get_env_csv(name: str, default: list[str]) -> list[str]:
     return [item for item in items if item]
 
 
+def _get_env_int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    
+    try:
+        return int(value.strip())
+    except ValueError:
+        import logging
+        logging.warning(f"Invalid integer value for {name}: '{value}', using default: {default}")
+        return default
+
+
 def _is_production_environment(environment: str) -> bool:
     return environment.lower() in {"production", "prod", "staging"}
 
@@ -66,6 +79,13 @@ class Settings:
     cookie_samesite: CookieSameSite
     cookie_path: str
     cookie_domain: Optional[str]
+    
+    rate_limit_enabled: bool
+    rate_limit_max_attempts: int
+    rate_limit_window_seconds: int
+    rate_limit_block_seconds: int
+    
+    trusted_proxies: list[str]
 
 
 
@@ -105,13 +125,15 @@ def get_settings() -> Settings:
     if cookie_samesite == "none" and not cookie_secure:
         cookie_secure = True
 
+    rate_limit_enabled_default = environment.lower() not in {"test", "testing"}
+    
     return Settings(
         environment=environment,
         is_production=is_production,
         debug=_get_env_bool("DEBUG", default=debug_default),
         docs_enabled=_get_env_bool("DOCS_ENABLED", default=docs_enabled_default),
         log_level=_get_env_str("LOG_LEVEL", "INFO"),
-        run_migrations_on_startup=_get_env_bool("RUN_MIGRATIONS_ON_STARTUP", default=True),
+        run_migrations_on_startup=_get_env_bool("RUN_MIGRATIONS_ON_STARTUP", default=not is_production),
         auto_create_tables=_get_env_bool("AUTO_CREATE_TABLES", default=not is_production),
         cors_allowed_origins=cors_allowed_origins,
         cors_allow_credentials=_get_env_bool("CORS_ALLOW_CREDENTIALS", default=True),
@@ -121,5 +143,10 @@ def get_settings() -> Settings:
         cookie_samesite=cookie_samesite,
         cookie_path=_get_env_str("COOKIE_PATH", "/"),
         cookie_domain=os.getenv("COOKIE_DOMAIN"),
+        rate_limit_enabled=_get_env_bool("RATE_LIMIT_ENABLED", default=rate_limit_enabled_default),
+        rate_limit_max_attempts=_get_env_int("RATE_LIMIT_MAX_ATTEMPTS", 5),
+        rate_limit_window_seconds=_get_env_int("RATE_LIMIT_WINDOW_SECONDS", 60),
+        rate_limit_block_seconds=_get_env_int("RATE_LIMIT_BLOCK_SECONDS", 60),
+        trusted_proxies=_get_env_csv("TRUSTED_PROXIES", []),
     )
 

@@ -220,33 +220,41 @@ def require_role(required_role: str):
     return role_checker
 
 def check_record_access(record_type: str, record_id_param: str, required_access: str):
-    """
-    Check if current user has required access to specific record.
-    record_id_param: The name of the path parameter containing the ID (e.g., 'po_id', 'wbs_id')
-    Access levels: Read < Write < Full
-    """
     def access_checker(
         request: Request,
         current_user: models.User = Depends(get_current_user),
         db: Session = Depends(get_db)
     ):
-        # Extract record_id from path params
         record_id = request.path_params.get(record_id_param)
         if not record_id:
-             # If we can't find ID, we assume it's a create/list operation which is handled by role
-             return current_user
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Missing required path parameter: {record_id_param}"
+            )
         
         try:
             record_id = int(record_id)
         except ValueError:
-            return current_user
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid {record_id_param}: must be an integer"
+            )
 
-        # Admin has full access to everything
-        if current_user.role == "Admin":
-            return current_user
+        model_cls = getattr(models, record_type, None)
+        if not model_cls:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unknown record type: {record_type}"
+            )
+        
+        record = db.get(model_cls, record_id)
+        if not record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"{record_type} {record_id} not found"
+            )
 
-        # Manager has full access to everything
-        if current_user.role == "Manager":
+        if current_user.role in ("Admin", "Manager"):
             return current_user
 
         access_levels = {"Read": 0, "Write": 1, "Full": 2}
@@ -257,25 +265,15 @@ def check_record_access(record_type: str, record_id_param: str, required_access:
                 detail="Insufficient permissions"
             )
 
-        # Fetch the record to check owner_group_id and creator
-        model_cls = getattr(models, record_type, None)
-        record = None
-        if model_cls:
-            record = db.get(model_cls, record_id)
+        if hasattr(record, 'created_by') and record.created_by == current_user.id:
+            return current_user
 
-            # Check if user is creator (has full access)
-            if record and hasattr(record, 'created_by') and record.created_by == current_user.id:
+        if hasattr(record, 'owner_group_id') and record.owner_group_id:
+            if user_in_owner_group(current_user, record.owner_group_id, db, required_access):
                 return current_user
 
-            # CRITICAL: Check owner_group_id membership (default Read/Write access)
-            if record and hasattr(record, 'owner_group_id') and record.owner_group_id:
-                if user_in_owner_group(current_user, record.owner_group_id, db, required_access):
-                    return current_user
-
-        # Check explicit record access grants
         req_level_val = access_levels.get(required_access, 2)
         
-        # Check direct user access
         user_access = db.query(models.RecordAccess).filter(
             models.RecordAccess.record_type == record_type,
             models.RecordAccess.record_id == record_id,
@@ -286,7 +284,6 @@ def check_record_access(record_type: str, record_id_param: str, required_access:
         if user_access and access_levels.get(user_access.access_level, 0) >= req_level_val:
             return current_user
             
-        # Check group access
         user_groups = db.query(models.UserGroupMembership).filter(
             models.UserGroupMembership.user_id == current_user.id
         ).all()
@@ -302,16 +299,9 @@ def check_record_access(record_type: str, record_id_param: str, required_access:
             if group_access and access_levels.get(group_access.access_level, 0) >= req_level_val:
                 return current_user
                 
-        # Check department access for User role
-        # Requires fetching the record again if not fetched
-        if current_user.role == "User":
-             if not model_cls:
-                 model_cls = getattr(models, record_type, None)
-             if model_cls:
-                record = db.get(model_cls, record_id)
-                if record and hasattr(record, 'dept'):
-                    if record.dept == current_user.department and required_access in ["Read", "Write"]:
-                        return current_user
+        if current_user.role == "User" and hasattr(record, 'dept'):
+            if record.dept == current_user.department and required_access in ["Read", "Write"]:
+                return current_user
 
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -385,7 +375,11 @@ def audit_log_change(action: str, table_name: str):
                     elif hasattr(result, '__dict__'):
                         new_vals = {k: v for k, v in result.__dict__.items() if not k.startswith('_')}
 
-                # Add audit log entry
+                ip_address = None
+                if request:
+                    from .rate_limiter import get_client_ip
+                    ip_address = get_client_ip(request)
+                
                 audit_entry = models.AuditLog(
                     table_name=table_name,
                     record_id=record_id,
@@ -394,7 +388,7 @@ def audit_log_change(action: str, table_name: str):
                     new_values=json.dumps(new_vals, default=str) if new_vals else None,
                     user_id=current_user.id,
                     timestamp=now_utc(),
-                    ip_address=None
+                    ip_address=ip_address
                 )
                 db.add(audit_entry)
                 db.commit()

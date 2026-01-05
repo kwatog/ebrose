@@ -21,6 +21,7 @@ from ..auth import (
     verify_password,
 )
 from ..config import get_settings
+from ..rate_limiter import get_client_ip, login_rate_limiter_check, login_rate_limiter_reset
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -123,10 +124,16 @@ def register(
 
 @router.post("/login", response_model=schemas.UserResponse)
 def login(
+    request: Request,
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ) -> schemas.UserResponse:
+    client_ip = get_client_ip(request)
+    rate_limit_key = f"{client_ip}:{form_data.username}"
+    
+    login_rate_limiter_check(rate_limit_key, client_ip)
+    
     user = db.query(models.User).filter(models.User.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
@@ -135,6 +142,8 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    login_rate_limiter_reset(rate_limit_key, client_ip)
+    
     user.last_login = now_utc()
     db.commit()
 
