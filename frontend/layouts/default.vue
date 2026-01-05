@@ -6,6 +6,7 @@ import {
   BriefcaseIcon, 
   FolderIcon,
   UserGroupIcon,
+  UserCircleIcon,
   ChartBarIcon,
   Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
@@ -32,7 +33,20 @@ const decodeUserInfo = (value: string | null | object): any => {
   }
 }
 
-const user = ref(decodeUserInfo(userCookie.value))
+const user = computed(() => {
+  if (!userCookie.value) return null
+  try {
+    let b64 = String(userCookie.value)
+    if (b64.startsWith('"') && b64.endsWith('"')) {
+      b64 = b64.slice(1, -1)
+    }
+    const json = decodeURIComponent(escape(atob(b64)))
+    return JSON.parse(json)
+  } catch {
+    return null
+  }
+})
+
 const mobileMenuOpen = ref(false)
 
 // Dropdown state for accessibility
@@ -41,7 +55,7 @@ const projectsDropdownOpen = ref(false)
 const adminDropdownOpen = ref(false)
 
 watch(userCookie, (newVal) => {
-  user.value = decodeUserInfo(newVal)
+  // User will automatically update due to computed
 })
 
 // Dropdown toggle functions
@@ -182,6 +196,11 @@ const closeMobileMenu = () => {
           <NuxtLink to="/allocations" class="nav-link" :class="{ active: isActive('/allocations') }" @click="closeMobileMenu">
             <BriefcaseIcon class="nav-icon-svg" aria-hidden="true" />
             <span class="nav-label">Allocations</span>
+          </NuxtLink>
+
+          <NuxtLink to="/profile" class="nav-link" :class="{ active: isActive('/profile') }" @click="closeMobileMenu">
+            <UserCircleIcon class="nav-icon-svg" aria-hidden="true" />
+            <span class="nav-label">Profile</span>
           </NuxtLink>
         </div>
 

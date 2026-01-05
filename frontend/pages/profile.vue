@@ -6,17 +6,36 @@ const userCookie = useCookie('user_info')
 const tokenCookie = useCookie('access_token')
 const { success, error: showError } = useToast()
 
-const user = ref(userCookie.value ? JSON.parse(decodeURIComponent(atob(String(userCookie.value).replace(/"/g, '')))) : null)
+const user = computed(() => {
+  if (!userCookie.value) return null
+  try {
+    const cookieStr = String(userCookie.value).replace(/"/g, '')
+    const decoded = decodeURIComponent(atob(cookieStr))
+    return JSON.parse(decoded)
+  } catch {
+    return null
+  }
+})
 
 const profileForm = ref({
-  full_name: user.value?.full_name || '',
-  department: user.value?.department || ''
+  full_name: '',
+  department: ''
 })
 
 const passwordForm = ref({
   current_password: '',
   new_password: ''
 })
+
+// Initialize form when user data is available
+watch(user, (newUser) => {
+  if (newUser) {
+    profileForm.value = {
+      full_name: newUser.full_name || '',
+      department: newUser.department || ''
+    }
+  }
+}, { immediate: true })
 
 const loading = ref(false)
 const passwordLoading = ref(false)
