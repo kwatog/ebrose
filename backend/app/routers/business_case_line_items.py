@@ -86,8 +86,10 @@ def get_line_item(
 
 
 @router.post("/", response_model=schemas.BusinessCaseLineItem)
-def create_line_item(
+@audit_log_change(action="CREATE", table_name="business_case_line_item")
+async def create_line_item(
     line_item: schemas.BusinessCaseLineItemCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role("User"))
 ):
@@ -117,27 +119,18 @@ def create_line_item(
     )
 
     db.add(db_line_item)
-
-    # Add audit log
-    audit_entry = models.AuditLog(
-        table_name="business_case_line_item",
-        record_id=db_line_item.id,
-        action="CREATE",
-        new_values=line_item.model_dump_json(),
-        user_id=current_user.id,
-        timestamp=now_utc()
-    )
-    db.add(audit_entry)
-
+    db.flush()
     db.commit()
     db.refresh(db_line_item)
     return db_line_item
 
 
 @router.put("/{id}", response_model=schemas.BusinessCaseLineItem)
-def update_line_item(
+@audit_log_change(action="UPDATE", table_name="business_case_line_item")
+async def update_line_item(
     id: int,
     line_item_update: schemas.BusinessCaseLineItemUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("BusinessCaseLineItem", "id", "Write"))
 ):
@@ -145,9 +138,6 @@ def update_line_item(
     db_line_item = db.get(models.BusinessCaseLineItem, id)
     if not db_line_item:
         raise HTTPException(status_code=404, detail="Business case line item not found")
-
-    # Store old values for audit
-    old_values = schemas.BusinessCaseLineItem.model_validate(db_line_item).model_dump()
 
     # Update fields
     update_data = line_item_update.model_dump(exclude_unset=True)
@@ -157,26 +147,16 @@ def update_line_item(
     db_line_item.updated_by = current_user.id
     db_line_item.updated_at = now_utc()
 
-    # Add audit log
-    audit_entry = models.AuditLog(
-        table_name="business_case_line_item",
-        record_id=id,
-        action="UPDATE",
-        old_values=schemas.BusinessCaseLineItem(**old_values).model_dump_json(),
-        new_values=schemas.BusinessCaseLineItem.model_validate(db_line_item).model_dump_json(),
-        user_id=current_user.id,
-        timestamp=now_utc()
-    )
-    db.add(audit_entry)
-
     db.commit()
     db.refresh(db_line_item)
     return db_line_item
 
 
 @router.delete("/{id}")
-def delete_line_item(
+@audit_log_change(action="DELETE", table_name="business_case_line_item")
+async def delete_line_item(
     id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role("Manager"))
 ):
@@ -194,20 +174,6 @@ def delete_line_item(
             status_code=400,
             detail="Cannot delete line item with associated WBS items"
         )
-
-    # Store for audit
-    old_values = schemas.BusinessCaseLineItem.model_validate(db_line_item).model_dump()
-
-    # Add audit log
-    audit_entry = models.AuditLog(
-        table_name="business_case_line_item",
-        record_id=id,
-        action="DELETE",
-        old_values=schemas.BusinessCaseLineItem(**old_values).model_dump_json(),
-        user_id=current_user.id,
-        timestamp=now_utc()
-    )
-    db.add(audit_entry)
 
     db.delete(db_line_item)
     db.commit()

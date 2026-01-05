@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Union
+import functools
 import json
 import os
 from jose import JWTError, jwt
@@ -327,6 +328,7 @@ def audit_log_change(action: str, table_name: str):
     For CREATE: ensure db.flush() is called to generate ID before audit log.
     """
     def audit_decorator(func):
+        @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             current_user = kwargs.get('current_user')
             db = kwargs.get('db')

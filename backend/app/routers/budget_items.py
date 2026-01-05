@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from .. import models, schemas
-from ..database import SessionLocal, get_db
+from ..database import get_db
 from ..auth import get_current_user, require_role, check_record_access, audit_log_change, now_utc
 
 router = APIRouter(prefix="/budget-items", tags=["budget-items"])
@@ -23,28 +23,23 @@ def list_budget_items(
 
     query = db.query(models.BudgetItem)
 
-    # CRITICAL: Filter by owner_group_id access (only show records user can access)
     if current_user.role not in ["Admin", "Manager"]:
-        # Get all groups the user is a member of
         user_groups = db.query(models.UserGroupMembership).filter(
             models.UserGroupMembership.user_id == current_user.id
         ).all()
         group_ids = [membership.group_id for membership in user_groups]
 
-        # Filter to records owned by user's groups OR created by user OR explicit RecordAccess grants
         accessible_ids_query = db.query(models.BudgetItem.id).filter(
             (models.BudgetItem.owner_group_id.in_(group_ids)) |
             (models.BudgetItem.created_by == current_user.id)
         )
 
-        # Add explicit user-level RecordAccess grants
         explicit_user_access = db.query(models.RecordAccess.record_id).filter(
             models.RecordAccess.record_type == "BudgetItem",
             models.RecordAccess.user_id == current_user.id,
             (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
         )
 
-        # Add explicit group-level RecordAccess grants
         explicit_group_access = db.query(models.RecordAccess.record_id).filter(
             models.RecordAccess.record_type == "BudgetItem",
             models.RecordAccess.group_id.in_(group_ids),
@@ -57,16 +52,13 @@ def list_budget_items(
 
         query = query.filter(models.BudgetItem.id.in_(accessible_ids))
 
-    # Apply filters
     if fiscal_year:
         query = query.filter(models.BudgetItem.fiscal_year == fiscal_year)
     if owner_group_id:
         query = query.filter(models.BudgetItem.owner_group_id == owner_group_id)
 
-    # Order by created_at descending
     query = query.order_by(models.BudgetItem.created_at.desc())
 
-    # Apply pagination
     items = query.offset(skip).limit(limit).all()
     return items
 
@@ -85,6 +77,7 @@ def get_budget_item(
 
 
 @router.post("/", response_model=schemas.BudgetItem)
+@audit_log_change(action="CREATE", table_name="budget_item")
 async def create_budget_item(
     budget_item: schemas.BudgetItemCreate,
     request: Request,
@@ -92,21 +85,18 @@ async def create_budget_item(
     current_user: models.User = Depends(require_role("User"))
 ):
     """Create a new budget item (User+ only)."""
-    # CRITICAL: Viewers cannot create any records
     if current_user.role == "Viewer":
         raise HTTPException(
             status_code=403,
             detail="Viewers cannot create budget items"
         )
 
-    # Check if workday_ref already exists
     existing = db.query(models.BudgetItem).filter(
         models.BudgetItem.workday_ref == budget_item.workday_ref
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Budget item with this Workday reference already exists")
 
-    # Create new budget item
     db_budget_item = models.BudgetItem(
         **budget_item.model_dump(),
         created_by=current_user.id,
@@ -114,28 +104,18 @@ async def create_budget_item(
     )
 
     db.add(db_budget_item)
-    db.flush()  # Flush to generate ID before audit log creation
-
-    # Add audit log
-    audit_entry = models.AuditLog(
-        table_name="budget_item",
-        record_id=db_budget_item.id,
-        action="CREATE",
-        new_values=budget_item.model_dump_json(),
-        user_id=current_user.id,
-        timestamp=now_utc()
-    )
-    db.add(audit_entry)
-
+    db.flush()
     db.commit()
     db.refresh(db_budget_item)
     return db_budget_item
 
 
 @router.put("/{id}", response_model=schemas.BudgetItem)
-def update_budget_item(
+@audit_log_change(action="UPDATE", table_name="budget_item")
+async def update_budget_item(
     id: int,
     budget_item_update: schemas.BudgetItemUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(check_record_access("BudgetItem", "id", "Write"))
 ):
@@ -144,10 +124,6 @@ def update_budget_item(
     if not db_budget_item:
         raise HTTPException(status_code=404, detail="Budget item not found")
 
-    # Store old values for audit
-    old_values = schemas.BudgetItem.model_validate(db_budget_item).model_dump()
-
-    # Update fields
     update_data = budget_item_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_budget_item, key, value)
@@ -155,26 +131,16 @@ def update_budget_item(
     db_budget_item.updated_by = current_user.id
     db_budget_item.updated_at = now_utc()
 
-    # Add audit log
-    audit_entry = models.AuditLog(
-        table_name="budget_item",
-        record_id=id,
-        action="UPDATE",
-        old_values=schemas.BudgetItem(**old_values).model_dump_json(),
-        new_values=schemas.BudgetItem.model_validate(db_budget_item).model_dump_json(),
-        user_id=current_user.id,
-        timestamp=now_utc()
-    )
-    db.add(audit_entry)
-
     db.commit()
     db.refresh(db_budget_item)
     return db_budget_item
 
 
 @router.delete("/{id}")
-def delete_budget_item(
+@audit_log_change(action="DELETE", table_name="budget_item")
+async def delete_budget_item(
     id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role("Manager"))
 ):
@@ -183,7 +149,6 @@ def delete_budget_item(
     if not db_budget_item:
         raise HTTPException(status_code=404, detail="Budget item not found")
 
-    # Check if budget item has associated line items
     line_items = db.query(models.BusinessCaseLineItem).filter(
         models.BusinessCaseLineItem.budget_item_id == id
     ).first()
@@ -192,20 +157,6 @@ def delete_budget_item(
             status_code=400,
             detail="Cannot delete budget item with associated business case line items"
         )
-
-    # Store for audit
-    old_values = schemas.BudgetItem.model_validate(db_budget_item).model_dump()
-
-    # Add audit log
-    audit_entry = models.AuditLog(
-        table_name="budget_item",
-        record_id=id,
-        action="DELETE",
-        old_values=schemas.BudgetItem(**old_values).model_dump_json(),
-        user_id=current_user.id,
-        timestamp=now_utc()
-    )
-    db.add(audit_entry)
 
     db.delete(db_budget_item)
     db.commit()
