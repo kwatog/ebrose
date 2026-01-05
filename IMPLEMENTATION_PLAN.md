@@ -30,6 +30,12 @@ Based on the recommendations in `RECOMMENDATIONS.md` and updated requirements in
 ### Next Steps
 - [ ] Add more Alembic migrations for future schema changes
 - [ ] Document deployment procedures
+- [ ] Enforce role caps for BusinessCase updates (Viewer should never write)
+- [ ] Align BusinessCaseLineItem access with owner-group + RecordAccess + role caps
+- [ ] Prevent Viewer from creating BudgetItem, BusinessCase, and Resource
+- [ ] Include group RecordAccess grants in list endpoints for access-scoped entities
+- [ ] Fix audit_log_change model lookup for ResourcePOAllocation
+- [ ] Make BaseTable selection stable across sorting (use row IDs vs indices)
 
 ---
 
