@@ -10,7 +10,19 @@ import {
 } from '@heroicons/vue/24/outline'
 
 const userCookie = useCookie('user_info')
-const user = computed(() => userCookie.value)
+const userData = ref<Record<string, any> | null>(null)
+
+onMounted(() => {
+  if (userCookie.value) {
+    try {
+      const cookieStr = String(userCookie.value).replace(/"/g, '')
+      const decoded = decodeURIComponent(atob(cookieStr))
+      userData.value = JSON.parse(decoded)
+    } catch {
+      userData.value = null
+    }
+  }
+})
 
 // Statistics data
 const stats = ref({
@@ -138,7 +150,7 @@ const isManager = computed(() => {
       <div>
         <h1 class="page-title">Dashboard</h1>
         <p class="page-subtitle">
-          Welcome back, <strong>{{ user?.username }}</strong> ({{ user?.role }})
+          Welcome back, <strong>{{ userData?.username }}</strong> ({{ userData?.role }})
         </p>
       </div>
     </div>

@@ -6,16 +6,23 @@ const userCookie = useCookie('user_info')
 const tokenCookie = useCookie('access_token')
 const { success, error: showError } = useToast()
 
-const user = computed(() => {
-  if (!userCookie.value) return null
-  try {
-    const cookieStr = String(userCookie.value).replace(/"/g, '')
-    const decoded = decodeURIComponent(atob(cookieStr))
-    return JSON.parse(decoded)
-  } catch {
-    return null
+// Safe user data parsing
+const userData = ref<Record<string, any> | null>(null)
+
+onMounted(() => {
+  if (userCookie.value) {
+    try {
+      const cookieStr = String(userCookie.value).replace(/"/g, '')
+      const decoded = decodeURIComponent(atob(cookieStr))
+      userData.value = JSON.parse(decoded)
+    } catch {
+      userData.value = null
+    }
   }
 })
+
+// Computed for template access
+const user = computed(() => userData.value)
 
 const profileForm = ref({
   full_name: '',
@@ -28,7 +35,7 @@ const passwordForm = ref({
 })
 
 // Initialize form when user data is available
-watch(user, (newUser) => {
+watch(userData, (newUser) => {
   if (newUser) {
     profileForm.value = {
       full_name: newUser.full_name || '',
@@ -91,15 +98,14 @@ const changePassword = async () => {
         <form @submit.prevent="updateProfile" class="profile-form">
           <BaseInput
             id="username"
-            :model-value="user?.username"
+            :model-value="userData?.username || ''"
             type="text"
             label="Username"
             disabled
           />
-
           <BaseInput
             id="email"
-            :model-value="user?.email"
+            :model-value="userData?.email || ''"
             type="email"
             label="Email"
             disabled
@@ -123,7 +129,7 @@ const changePassword = async () => {
 
           <BaseInput
             id="role"
-            :model-value="user?.role"
+            :model-value="userData?.role || ''"
             type="text"
             label="Role"
             disabled
