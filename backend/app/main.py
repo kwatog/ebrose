@@ -1,34 +1,37 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-import os
 import logging
-import logging.config
+import os
 
-from .database import Base, engine, SessionLocal
-from . import models, schemas, auth
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from . import models
 from .auth import now_utc
+from .config import get_settings
+from .database import Base, SessionLocal, engine
+
+settings = get_settings()
+
 from .routers import (
-    auth as auth_router,
-    users,
-    user_groups,
-    record_access,
-    audit_logs,
-    budget_items,
-    purchase_orders,
-    business_cases,
-    business_case_line_items,
-    wbs,
-    assets,
-    goods_receipts,
-    resources,
     allocations,
-    alerts
+    alerts,
+    assets,
+    audit_logs,
+    auth as auth_router,
+    budget_items,
+    business_case_line_items,
+    business_cases,
+    goods_receipts,
+    purchase_orders,
+    record_access,
+    resources,
+    user_groups,
+    users,
+    wbs,
 )
 
 # Configure logging - logs to stdout for K8s log collection
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+LOG_LEVEL = settings.log_level
 logging.basicConfig(
     level=LOG_LEVEL,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -56,11 +59,14 @@ async def lifespan(app: FastAPI):
     # Startup: Run migrations first
     logger.info("Starting Ebrose application...")
     
-    # Run Alembic migrations
-    run_migrations()
-    
-    # Create tables (for any new models since last migration)
-    Base.metadata.create_all(bind=engine)
+    if settings.run_migrations_on_startup:
+        run_migrations()
+
+    if settings.auto_create_tables and not settings.is_production:
+        Base.metadata.create_all(bind=engine)
+    elif settings.auto_create_tables and settings.is_production:
+        logger.warning("AUTO_CREATE_TABLES is enabled but ignored in production")
+
     
     # Initialize admin user from environment variables if no users exist
     if os.getenv("CREATE_ADMIN_USER", "").lower() in ["true", "1", "yes"]:
@@ -105,22 +111,28 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Ebrose application...")
     pass
 
-app = FastAPI(title="Ebrose API", debug=True, lifespan=lifespan)
+docs_url = "/docs" if settings.docs_enabled else None
+redoc_url = "/redoc" if settings.docs_enabled else None
+openapi_url = "/openapi.json" if settings.docs_enabled else None
+
+app = FastAPI(
+    title="Ebrose API",
+    debug=settings.debug,
+    docs_url=docs_url,
+    redoc_url=redoc_url,
+    openapi_url=openapi_url,
+    lifespan=lifespan,
+)
 
 # Enable CORS for frontend
-allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
-if allowed_origins_env:
-    allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
-else:
-    # Development fallback
-    allowed_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+allowed_origins = settings.cors_allowed_origins
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=settings.cors_allow_methods,
+    allow_headers=settings.cors_allow_headers,
 )
 
 def get_db():
@@ -149,7 +161,7 @@ def health_check():
         "status": "healthy", 
         "service": "ebrose", 
         "database": db_status,
-        "environment": os.getenv("ENVIRONMENT", "development")
+        "environment": settings.environment
     }
 
 app.include_router(auth_router.router)

@@ -79,6 +79,10 @@ backend:
     ACCESS_TOKEN_EXPIRE_MINUTES: "1440"
     LOG_LEVEL: "INFO"
     ENVIRONMENT: "production"
+    DEBUG: "false"
+    DOCS_ENABLED: "false"
+    RUN_MIGRATIONS_ON_STARTUP: "true"
+    AUTO_CREATE_TABLES: "false"
     
   # Required secrets (set via K8s secrets, not in values.yaml)
   # - ADMIN_PASSWORD: Admin user password
