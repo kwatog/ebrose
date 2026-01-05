@@ -17,34 +17,33 @@ import {
 
 const userCookie = useCookie('user_info')
 const tokenCookie = useCookie('access_token')
+const route = useRoute()
 
-const decodeUserInfo = (value: string | null | object): any => {
-  if (!value) return null
-  if (typeof value === 'object') return value
-  try {
-    let b64 = String(value)
-    if (b64.startsWith('"') && b64.endsWith('"')) {
-      b64 = b64.slice(1, -1)
-    }
-    const json = decodeURIComponent(escape(atob(b64)))
-    return JSON.parse(json)
-  } catch {
-    return null
+// User as ref to allow mutation in logout
+const user = ref<any>(null)
+
+const updateUserFromCookie = () => {
+  if (!userCookie.value) {
+    user.value = null
+    return
   }
-}
-
-const user = computed(() => {
-  if (!userCookie.value) return null
   try {
     let b64 = String(userCookie.value)
     if (b64.startsWith('"') && b64.endsWith('"')) {
       b64 = b64.slice(1, -1)
     }
     const json = decodeURIComponent(escape(atob(b64)))
-    return JSON.parse(json)
+    user.value = JSON.parse(json)
   } catch {
-    return null
+    user.value = null
   }
+}
+
+// Initialize user
+updateUserFromCookie()
+
+watch(userCookie, () => {
+  updateUserFromCookie()
 })
 
 const mobileMenuOpen = ref(false)
@@ -53,10 +52,6 @@ const mobileMenuOpen = ref(false)
 const financeDropdownOpen = ref(false)
 const projectsDropdownOpen = ref(false)
 const adminDropdownOpen = ref(false)
-
-watch(userCookie, (newVal) => {
-  // User will automatically update due to computed
-})
 
 // Dropdown toggle functions
 const toggleFinanceDropdown = () => {
@@ -94,11 +89,14 @@ const isAdminOrManager = computed(() => {
   return user.value && ['Admin', 'Manager'].includes(user.value.role)
 })
 
+// Use route reactively
+const currentPath = computed(() => route.path)
+
 const isActive = (path: string) => {
   if (path === '/') {
-    return useRoute().path === '/'
+    return currentPath.value === '/'
   }
-  return useRoute().path.startsWith(path)
+  return currentPath.value.startsWith(path)
 }
 
 const closeMobileMenu = () => {
