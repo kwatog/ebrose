@@ -182,4 +182,80 @@ test.describe('Application Screenshots', () => {
     }
     await page.screenshot({ path: 'screenshots/13-password-change-form.png', fullPage: true });
   });
+
+  test('14-resources', async ({ page }) => {
+    await loginAs(page, 'admin', 'admin123');
+    await page.goto('/resources');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: 'screenshots/14-resources.png', fullPage: true });
+  });
+
+  test('14b-resources-create-modal', async ({ page }) => {
+    await loginAs(page, 'admin', 'admin123');
+    await page.goto('/resources');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    const createButton = page.locator('button:has-text("+ Create Resource")');
+    if (await createButton.count() > 0) {
+      await createButton.click();
+      await page.waitForTimeout(500);
+    }
+    await page.screenshot({ path: 'screenshots/14b-resources-create-modal.png', fullPage: true });
+  });
+
+  test('15-allocations', async ({ page }) => {
+    await loginAs(page, 'admin', 'admin123');
+    await page.goto('/allocations');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: 'screenshots/15-allocations.png', fullPage: true });
+  });
+
+  test('15b-allocations-create-modal', async ({ page }) => {
+    await loginAs(page, 'admin', 'admin123');
+    await page.goto('/allocations');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    const createButton = page.locator('button:has-text("+ Create Allocation")');
+    if (await createButton.count() > 0) {
+      await createButton.click();
+      await page.waitForTimeout(500);
+    }
+    await page.screenshot({ path: 'screenshots/15b-allocations-create-modal.png', fullPage: true });
+  });
+
+  test('16-line-items', async ({ page }) => {
+    await loginAs(page, 'admin', 'admin123');
+    await page.goto('/line-items');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: 'screenshots/16-line-items.png', fullPage: true });
+  });
+
+  test('16b-line-items-create-modal', async ({ page }) => {
+    await loginAs(page, 'admin', 'admin123');
+    await page.goto('/line-items');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    const createButton = page.locator('button:has-text("+ Create Line Item")');
+    if (await createButton.count() > 0) {
+      await createButton.click();
+      await page.waitForTimeout(500);
+    }
+    await page.screenshot({ path: 'screenshots/16b-line-items-create-modal.png', fullPage: true });
+  });
+
+  test('17-business-cases-create-modal', async ({ page }) => {
+    await loginAs(page, 'admin', 'admin123');
+    await page.goto('/business-cases');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    const createButton = page.locator('button:has-text("+ Create Business Case")');
+    if (await createButton.count() > 0) {
+      await createButton.click();
+      await page.waitForTimeout(500);
+    }
+    await page.screenshot({ path: 'screenshots/17-business-cases-create-modal.png', fullPage: true });
+  });
 });

@@ -57,7 +57,8 @@ test.describe('Login Flow', () => {
     await page.waitForTimeout(500);
 
     await expect(page.locator('text=User Groups')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=Audit Logs')).toBeVisible({ timeout: 5000 });
+    // Target the nav dropdown item specifically, not the quick action link
+    await expect(page.locator('.nav-dropdown-menu a[href="/admin/audit"]')).toBeVisible({ timeout: 5000 });
   });
 
   test('manager user should see admin navigation items', async ({ page }) => {
@@ -68,7 +69,8 @@ test.describe('Login Flow', () => {
     await page.waitForTimeout(500);
 
     await expect(page.locator('text=User Groups')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=Audit Logs')).toBeVisible({ timeout: 5000 });
+    // Target the nav dropdown item specifically, not the quick action link
+    await expect(page.locator('.nav-dropdown-menu a[href="/admin/audit"]')).toBeVisible({ timeout: 5000 });
   });
 
   test('regular user should not see admin navigation items', async ({ page }) => {
