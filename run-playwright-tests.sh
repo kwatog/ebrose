@@ -200,12 +200,8 @@ $CONTAINER_CMD run --rm \
         echo '✅ Certificate installed'
     fi
     echo ''
-    echo '📦 Installing dependencies...'
-    npm install --silent 2>/dev/null
-    echo '✅ Dependencies installed'
-    echo ''
-    echo '🧪 Running UI tests (using pre-installed Chromium)...'
-    npx playwright test tests/e2e/ --reporter=list
+    echo '🧪 Running UI tests (using pre-installed Chromium in Docker)...'
+    npx -y @playwright/test@1.49.1 test tests/e2e/ --reporter=list
   "
 
 RESULT=$?
