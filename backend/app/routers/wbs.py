@@ -34,15 +34,23 @@ def list_wbs(
             (models.WBS.created_by == current_user.id)
         )
 
-        # Add explicit RecordAccess grants
-        explicit_access = db.query(models.RecordAccess.record_id).filter(
+        # Add explicit user-level RecordAccess grants
+        explicit_user_access = db.query(models.RecordAccess.record_id).filter(
             models.RecordAccess.record_type == "WBS",
             models.RecordAccess.user_id == current_user.id,
             (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
         )
 
+        # Add explicit group-level RecordAccess grants
+        explicit_group_access = db.query(models.RecordAccess.record_id).filter(
+            models.RecordAccess.record_type == "WBS",
+            models.RecordAccess.group_id.in_(group_ids),
+            (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
+        )
+
         accessible_ids = [item.id for item in accessible_ids_query.all()]
-        accessible_ids += [access.record_id for access in explicit_access.all()]
+        accessible_ids += [access.record_id for access in explicit_user_access.all()]
+        accessible_ids += [access.record_id for access in explicit_group_access.all()]
 
         query = query.filter(models.WBS.id.in_(accessible_ids))
 

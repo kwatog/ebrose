@@ -115,6 +115,24 @@ def regular_user(db_session):
 
 
 @pytest.fixture(scope="function")
+def viewer_user(db_session):
+    """Create a viewer user for testing."""
+    from app.auth import get_password_hash
+
+    user = models.User(
+        username="testviewer",
+        hashed_password=get_password_hash("testpass123"),
+        role="Viewer",
+        email="viewer@test.com",
+        full_name="Test Viewer"
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture(scope="function")
 def test_group(db_session, admin_user):
     """Create a test group."""
     group = models.UserGroup(
@@ -156,6 +174,17 @@ def user_token(client, regular_user):
     response = client.post(
         "/auth/login",
         data={"username": "testuser", "password": "testpass123"}
+    )
+    assert response.status_code == 200
+    return response.cookies.get("access_token")
+
+
+@pytest.fixture(scope="function")
+def viewer_token(client, viewer_user):
+    """Get JWT token for viewer user."""
+    response = client.post(
+        "/auth/login",
+        data={"username": "testviewer", "password": "testpass123"}
     )
     assert response.status_code == 200
     return response.cookies.get("access_token")

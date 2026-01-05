@@ -14,9 +14,9 @@ def list_business_cases(
     status: str = None,
     requestor: str = None,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("User"))
+    current_user: models.User = Depends(get_current_user)
 ):
-    """List all business cases with pagination and filtering - implements hybrid access control."""
+    """List all business cases with pagination and filtering - implements hybrid access control (allows Viewers to READ)."""
     from app.auth import check_business_case_access
 
     query = db.query(models.BusinessCase)
@@ -49,7 +49,7 @@ def list_business_cases(
 def get_business_case(
     bc_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("User"))
+    current_user: models.User = Depends(get_current_user)
 ):
     """Get a specific business case - uses hybrid access control."""
     from app.auth import check_business_case_access
@@ -58,7 +58,7 @@ def get_business_case(
     if not bc:
         raise HTTPException(status_code=404, detail="BusinessCase not found")
 
-    # CRITICAL: Check hybrid access control
+    # CRITICAL: Check hybrid access control (allows Viewers to READ)
     if current_user.role not in ["Admin", "Manager"]:
         if not check_business_case_access(current_user, bc, db, "Read"):
             raise HTTPException(status_code=403, detail="Insufficient permissions to access this business case")
@@ -68,11 +68,18 @@ def get_business_case(
 @router.post("/", response_model=schemas.BusinessCase)
 @audit_log_change(action="CREATE", table_name="business_case")
 async def create_business_case(
-    bc: schemas.BusinessCaseCreate, 
+    bc: schemas.BusinessCaseCreate,
     request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role("User"))
 ):
+    # CRITICAL: Viewers cannot create any records
+    if current_user.role == "Viewer":
+        raise HTTPException(
+            status_code=403,
+            detail="Viewers cannot create business cases"
+        )
+
     db_bc = models.BusinessCase(
         **bc.model_dump(),
         created_by=current_user.id,

@@ -73,9 +73,13 @@ def check_business_case_access(user: "models.User", business_case: "models.Busin
     access_levels = {"Read": 0, "Write": 1, "Full": 2}
     role_caps = {"Viewer": 0, "User": 1, "Manager": 2, "Admin": 2}
 
-    # CRITICAL: Enforce role caps - Viewer cannot Write regardless of grants
+    # CRITICAL: Enforce role caps FIRST - Viewer cannot Write regardless of ANY grants
     if access_levels.get(required_level, 2) > role_caps.get(user.role, 0):
         return False
+
+    # Admin/Manager bypass ALL other checks
+    if user.role in ["Admin", "Manager"]:
+        return True
 
     user_group_ids = [
         m.group_id

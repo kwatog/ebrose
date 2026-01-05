@@ -609,3 +609,235 @@ def test_password_policy_enforcement_on_login_missing_requirements(client, regul
             data={"username": "testuser", "password": password}
         )
         assert response.status_code == 401, f"Password '{password}' should be rejected"
+
+
+def test_viewer_cannot_create_budget_item(client, viewer_token, test_group):
+    """Test that Viewer role cannot create budget items."""
+    response = client.post(
+        "/budget-items",
+        json={
+            "workday_ref": "WD-TEST-001",
+            "title": "Test Budget",
+            "budget_amount": 100000,
+            "currency": "USD",
+            "fiscal_year": 2025,
+            "owner_group_id": test_group.id
+        },
+        cookies={"access_token": viewer_token}
+    )
+    assert response.status_code == 403
+    # require_role("User") blocks Viewers before the explicit check runs
+    assert "Insufficient permissions" in response.json()["detail"] or "Viewers cannot create" in response.json()["detail"]
+
+
+def test_viewer_cannot_create_business_case(client, viewer_token):
+    """Test that Viewer role cannot create business cases."""
+    response = client.post(
+        "/business-cases",
+        json={
+            "title": "Test BC",
+            "description": "Test description",
+            "requestor": "Test User",
+            "dept": "Test Dept",
+            "estimated_cost": 50000,
+            "status": "Draft"
+        },
+        cookies={"access_token": viewer_token}
+    )
+    # Viewers should be blocked (403 or 422 are both acceptable)
+    assert response.status_code in [403, 422]
+
+
+def test_viewer_cannot_create_resource(client, viewer_token, test_group):
+    """Test that Viewer role cannot create resources."""
+    response = client.post(
+        "/resources",
+        json={
+            "name": "Test Resource",
+            "vendor": "Test Vendor",
+            "status": "Active",
+            "owner_group_id": test_group.id
+        },
+        cookies={"access_token": viewer_token}
+    )
+    # Viewers should be blocked (403 or 422 are both acceptable)
+    assert response.status_code in [403, 422]
+
+
+def test_viewer_cannot_update_bc_via_lead_group(client, admin_user, admin_token, viewer_user, viewer_token, test_group, db_session):
+    """Test that Viewer in lead_group cannot update BusinessCase."""
+    from app.models import BusinessCase, UserGroupMembership
+
+    # Add viewer to test group
+    membership = UserGroupMembership(
+        user_id=viewer_user.id,
+        group_id=test_group.id
+    )
+    db_session.add(membership)
+    db_session.commit()
+
+    # Create business case with lead_group_id
+    bc = BusinessCase(
+        title="Test BC",
+        description="Test",
+        requestor="Test",
+        dept="Test",
+        estimated_cost=1000,
+        status="Draft",
+        lead_group_id=test_group.id,
+        created_by=admin_user.id,
+        created_at=now_utc()
+    )
+    db_session.add(bc)
+    db_session.commit()
+    db_session.refresh(bc)
+
+    # Viewer should NOT be able to update even though they're in lead_group
+    response = client.put(
+        f"/business-cases/{bc.id}",
+        json={"description": "Updated by viewer"},
+        cookies={"access_token": viewer_token}
+    )
+    assert response.status_code == 403
+
+
+def test_viewer_cannot_update_bc_via_line_item_access(client, admin_user, admin_token, viewer_user, viewer_token, test_group, db_session):
+    """Test that Viewer with line-item access cannot update BusinessCase."""
+    from app.models import BusinessCase, BudgetItem, BusinessCaseLineItem, UserGroupMembership
+
+    # Add viewer to test group
+    membership = UserGroupMembership(
+        user_id=viewer_user.id,
+        group_id=test_group.id
+    )
+    db_session.add(membership)
+    db_session.commit()
+
+    # Create budget item
+    budget_item = BudgetItem(
+        workday_ref="WD-2025-TEST",
+        title="Test Budget",
+        budget_amount=100000,
+        currency="USD",
+        fiscal_year=2025,
+        owner_group_id=test_group.id,
+        created_by=admin_user.id,
+        created_at=now_utc()
+    )
+    db_session.add(budget_item)
+    db_session.commit()
+    db_session.refresh(budget_item)
+
+    # Create business case
+    bc = BusinessCase(
+        title="Test BC",
+        description="Test",
+        requestor="Test",
+        dept="Test",
+        estimated_cost=50000,
+        status="Draft",
+        created_by=admin_user.id,
+        created_at=now_utc()
+    )
+    db_session.add(bc)
+    db_session.commit()
+    db_session.refresh(bc)
+
+    # Create line item (gives viewer access via budget item owner_group)
+    line_item = BusinessCaseLineItem(
+        business_case_id=bc.id,
+        budget_item_id=budget_item.id,
+        title="Test Line Item",
+        spend_category="CAPEX",
+        requested_amount=50000,
+        currency="USD",
+        owner_group_id=test_group.id,
+        created_by=admin_user.id,
+        created_at=now_utc()
+    )
+    db_session.add(line_item)
+    db_session.commit()
+
+    # Viewer should be able to READ the BC
+    response = client.get(
+        f"/business-cases/{bc.id}",
+        cookies={"access_token": viewer_token}
+    )
+    assert response.status_code == 200
+
+    # But Viewer should NOT be able to UPDATE even with line-item access
+    response = client.put(
+        f"/business-cases/{bc.id}",
+        json={"description": "Updated by viewer"},
+        cookies={"access_token": viewer_token}
+    )
+    assert response.status_code == 403
+
+
+def test_group_record_access_in_budget_item_list(client, admin_user, admin_token, regular_user, user_token, test_group, db_session):
+    """Test that group-level RecordAccess grants appear in budget item list."""
+    from app.models import BudgetItem, RecordAccess, UserGroupMembership
+
+    # Create a second group
+    from app.models import UserGroup
+    group2 = UserGroup(
+        name="Group 2",
+        description="Second test group",
+        created_by=admin_user.id
+    )
+    db_session.add(group2)
+    db_session.commit()
+    db_session.refresh(group2)
+
+    # Add regular user to group2
+    membership = UserGroupMembership(
+        user_id=regular_user.id,
+        group_id=group2.id
+    )
+    db_session.add(membership)
+    db_session.commit()
+
+    # Create budget item owned by test_group (user NOT in this group)
+    budget_item = BudgetItem(
+        workday_ref="WD-GROUP-TEST",
+        title="Test Budget",
+        budget_amount=100000,
+        currency="USD",
+        fiscal_year=2025,
+        owner_group_id=test_group.id,
+        created_by=admin_user.id,
+        created_at=now_utc()
+    )
+    db_session.add(budget_item)
+    db_session.commit()
+    db_session.refresh(budget_item)
+
+    # User should NOT see it initially
+    response = client.get(
+        "/budget-items",
+        cookies={"access_token": user_token}
+    )
+    assert response.status_code == 200
+    items = response.json()
+    assert budget_item.id not in [item["id"] for item in items]
+
+    # Grant Read access to group2
+    access_grant = RecordAccess(
+        record_type="BudgetItem",
+        record_id=budget_item.id,
+        group_id=group2.id,
+        access_level="Read",
+        granted_by=admin_user.id,
+        granted_at=now_utc()
+    )
+    db_session.add(access_grant)
+    db_session.commit()
+
+    # Now user SHOULD see it (via group grant)
+    response = client.get(
+        "/budget-items",
+        cookies={"access_token": user_token}
+    )
+    assert response.status_code == 200
+    items = response.json()
+    assert budget_item.id in [item["id"] for item in items]

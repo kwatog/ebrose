@@ -44,15 +44,23 @@ def list_line_items(
             (models.BusinessCaseLineItem.created_by == current_user.id)
         )
 
-        # Add explicit RecordAccess grants
-        explicit_access = db.query(models.RecordAccess.record_id).filter(
+        # Add explicit user-level RecordAccess grants
+        explicit_user_access = db.query(models.RecordAccess.record_id).filter(
             models.RecordAccess.record_type == "BusinessCaseLineItem",
             models.RecordAccess.user_id == current_user.id,
             (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
         )
 
+        # Add explicit group-level RecordAccess grants
+        explicit_group_access = db.query(models.RecordAccess.record_id).filter(
+            models.RecordAccess.record_type == "BusinessCaseLineItem",
+            models.RecordAccess.group_id.in_(group_ids),
+            (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
+        )
+
         accessible_ids = [item.id for item in accessible_ids_query.all()]
-        accessible_ids += [access.record_id for access in explicit_access.all()]
+        accessible_ids += [access.record_id for access in explicit_user_access.all()]
+        accessible_ids += [access.record_id for access in explicit_group_access.all()]
 
         query = query.filter(models.BusinessCaseLineItem.id.in_(accessible_ids))
 
@@ -92,6 +100,13 @@ def create_line_item(
     current_user: models.User = Depends(require_role("User"))
 ):
     """Create a new business case line item."""
+    # CRITICAL: Viewers cannot create any records
+    if current_user.role == "Viewer":
+        raise HTTPException(
+            status_code=403,
+            detail="Viewers cannot create business case line items"
+        )
+
     # Verify business case exists
     business_case = db.get(models.BusinessCase, line_item.business_case_id)
     if not business_case:

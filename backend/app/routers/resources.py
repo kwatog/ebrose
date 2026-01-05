@@ -94,11 +94,18 @@ def get_resource(
 @router.post("/", response_model=schemas.Resource)
 @audit_log_change(action="CREATE", table_name="resource")
 async def create_resource(
-    resource: schemas.ResourceCreate, 
+    resource: schemas.ResourceCreate,
     request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role("User"))
 ):
+    # CRITICAL: Viewers cannot create any records
+    if current_user.role == "Viewer":
+        raise HTTPException(
+            status_code=403,
+            detail="Viewers cannot create resources"
+        )
+
     db_resource = models.Resource(
         **resource.model_dump(),
         created_by=current_user.id,

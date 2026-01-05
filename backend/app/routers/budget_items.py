@@ -45,15 +45,23 @@ def list_budget_items(
             (models.BudgetItem.created_by == current_user.id)
         )
 
-        # Add explicit RecordAccess grants
-        explicit_access = db.query(models.RecordAccess.record_id).filter(
+        # Add explicit user-level RecordAccess grants
+        explicit_user_access = db.query(models.RecordAccess.record_id).filter(
             models.RecordAccess.record_type == "BudgetItem",
             models.RecordAccess.user_id == current_user.id,
             (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
         )
 
+        # Add explicit group-level RecordAccess grants
+        explicit_group_access = db.query(models.RecordAccess.record_id).filter(
+            models.RecordAccess.record_type == "BudgetItem",
+            models.RecordAccess.group_id.in_(group_ids),
+            (models.RecordAccess.expires_at.is_(None)) | (models.RecordAccess.expires_at > now_utc())
+        )
+
         accessible_ids = [item.id for item in accessible_ids_query.all()]
-        accessible_ids += [access.record_id for access in explicit_access.all()]
+        accessible_ids += [access.record_id for access in explicit_user_access.all()]
+        accessible_ids += [access.record_id for access in explicit_group_access.all()]
 
         query = query.filter(models.BudgetItem.id.in_(accessible_ids))
 
@@ -92,6 +100,13 @@ async def create_budget_item(
     current_user: models.User = Depends(require_role("User"))
 ):
     """Create a new budget item (User+ only)."""
+    # CRITICAL: Viewers cannot create any records
+    if current_user.role == "Viewer":
+        raise HTTPException(
+            status_code=403,
+            detail="Viewers cannot create budget items"
+        )
+
     # Check if workday_ref already exists
     existing = db.query(models.BudgetItem).filter(
         models.BudgetItem.workday_ref == budget_item.workday_ref
