@@ -1,4 +1,7 @@
 export default defineNuxtConfig({
+  future: {
+    compatibilityVersion: 4,
+  },
   devtools: { enabled: false }, // Disable devtools in production
   css: ['~/assets/css/main.css'],
   app: {
