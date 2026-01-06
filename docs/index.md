@@ -194,8 +194,9 @@ python3 -m pytest tests/ -v
 
 # Frontend E2E tests
 cd frontend
-npm run test:e2e:playwright
+npm run test:e2e
 ```
+
 
 ## Deployment
 

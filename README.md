@@ -82,6 +82,44 @@ npm install
 npm run dev
 ```
 
+### Development Notes
+
+Run backend and frontend in separate terminals. By default:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API docs: http://localhost:8000/docs
+
+If the frontend loads but API calls fail, confirm `NUXT_PUBLIC_API_BASE` points at the backend (default `http://localhost:8000`).
+
+### E2E Tests (Playwright)
+
+Preferred options:
+
+- Script (starts backend/frontend if needed, runs tests in Playwright container):
+```bash
+./run-playwright-tests.sh
+```
+
+- Docker Compose (runs backend + frontend + Playwright runner):
+```bash
+docker compose -f docker-compose.playwright.yml up --build --abort-on-container-exit --exit-code-from playwright
+```
+
+Local run (requires Playwright browsers installed) expects a seeded backend:
+```bash
+cd backend
+source venv/bin/activate
+python reset_and_seed.py
+uvicorn app.main:app --reload
+
+cd frontend
+npm install
+npx playwright install chromium
+npm run test:e2e
+```
+
+Playwright base URL is configured in `frontend/playwright.config.ts` and can be overridden with `BASE_URL` (default `http://localhost:3000`).
+
 ## Kubernetes Deployment
 
 ### Prerequisites

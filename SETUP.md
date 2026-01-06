@@ -75,7 +75,7 @@ cd /Users/mmmiciano/ISEngineering/ebrose
 # Build and run tests with a single command (Docker)
 docker run --rm \
   -e CI=true \
-  -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:3000 \
+  -e BASE_URL=http://host.docker.internal:3000 \
   -v $(pwd)/frontend/tests/screenshots:/app/tests/screenshots \
   -v $(pwd)/frontend:/app \
   -w /app \
@@ -85,7 +85,7 @@ docker run --rm \
 # Or with Podman
 podman run --rm \
   -e CI=true \
-  -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:3000 \
+  -e BASE_URL=http://host.docker.internal:3000 \
   -v $(pwd)/frontend/tests/screenshots:/app/tests/screenshots:z \
   -v $(pwd)/frontend:/app \
   -w /app \

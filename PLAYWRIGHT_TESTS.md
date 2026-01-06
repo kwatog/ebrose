@@ -83,7 +83,8 @@ npm run test:e2e tests/e2e/access-control-ui.spec.ts
 
 ## Notes
 
-- Tests use **mocked API responses** - backend does not need to be running
+- Tests run against a real frontend + backend by default (the E2E flow logs in via `/auth/login`).
+- For stable results, seed/reset the DB before runs (`python reset_and_seed.py`) or use `./run-playwright-tests.sh` / `docker compose -f docker-compose.playwright.yml ...`.
 - Screenshots are saved in **PNG format** at full page resolution
 - Tests run in **headless mode** by default (use `--headed` flag for visible browser)
 - The `--network="host"` Docker flag allows tests to access `localhost` if needed

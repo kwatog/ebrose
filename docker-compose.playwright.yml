@@ -48,7 +48,7 @@ services:
       - ./frontend/tests/screenshots:/app/tests/screenshots
     environment:
       - CI=true
-      - PLAYWRIGHT_BASE_URL=http://frontend:3000
+      - BASE_URL=http://frontend:3000
     depends_on:
       frontend:
         condition: service_healthy
