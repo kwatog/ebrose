@@ -54,9 +54,22 @@ interface Group {
   name: string
 }
 
+interface GoodsReceipt {
+  id: number
+  po_id: number
+  gr_number: string
+  gr_date?: string
+  amount: string
+  description?: string
+  owner_group_id: number
+  created_by?: number
+  created_at?: string
+}
+
 const items = ref<PurchaseOrder[]>([])
 const assets = ref<Asset[]>([])
 const groups = ref<Group[]>([])
+const goodsReceipts = ref<GoodsReceipt[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
@@ -159,9 +172,19 @@ const fetchGroups = async () => {
   }
 }
 
+const fetchGoodsReceipts = async () => {
+  try {
+    const data = await useApiFetch('/goods-receipts', { method: 'GET' })
+    goodsReceipts.value = data as GoodsReceipt[]
+  } catch (e: any) {
+    console.error('Failed to fetch goods receipts:', e)
+  }
+}
+
 onMounted(async () => {
   await fetchAssets()
   await fetchGroups()
+  await fetchGoodsReceipts()
   await fetchItems()
 })
 
@@ -215,6 +238,32 @@ const formatCurrency = (amount: string | number, currency: string) => {
     style: 'currency',
     currency: currency || 'USD'
   }).format(num)
+}
+
+// Utilization tracking based on Goods Receipts
+const getUtilizedAmount = (poId: number): number => {
+  return goodsReceipts.value
+    .filter(gr => gr.po_id === poId)
+    .reduce((sum, gr) => sum + (parseFloat(gr.amount) || 0), 0)
+}
+
+const getUtilizationPercentage = (po: PurchaseOrder): number => {
+  const totalAmount = parseFloat(po.total_amount) || 0
+  if (totalAmount === 0) return 0
+  const utilizedAmount = getUtilizedAmount(po.id)
+  return Math.round((utilizedAmount / totalAmount) * 100)
+}
+
+const getUtilizationColor = (percentage: number): string => {
+  if (percentage < 50) return 'var(--color-success)'
+  if (percentage < 80) return 'var(--color-warning)'
+  return 'var(--color-danger)'
+}
+
+const getUtilizationVariant = (percentage: number): 'success' | 'warning' | 'danger' => {
+  if (percentage < 50) return 'success'
+  if (percentage < 80) return 'warning'
+  return 'danger'
 }
 
 // Permissions
@@ -377,6 +426,7 @@ const tableColumns = [
   { key: 'asset', label: 'Asset', sortable: false },
   { key: 'supplier', label: 'Supplier', sortable: true },
   { key: 'total_amount', label: 'Amount', sortable: true, align: 'right' as const },
+  { key: 'utilization', label: 'Utilization (GR)', sortable: false, align: 'center' as const },
   { key: 'spend_category', label: 'Category', sortable: true, align: 'center' as const },
   { key: 'status', label: 'Status', sortable: true, align: 'center' as const },
   { key: 'owner_group', label: 'Owner Group', sortable: false },
@@ -457,6 +507,23 @@ const tableColumns = [
 
       <template #cell-total_amount="{ value, row }">
         {{ formatCurrency(value, row.currency) }}
+      </template>
+
+      <template #cell-utilization="{ row }">
+        <div class="utilization-cell">
+          <div class="utilization-bar-bg">
+            <div
+              class="utilization-bar-fill"
+              :style="{
+                width: getUtilizationPercentage(row) + '%',
+                backgroundColor: getUtilizationColor(getUtilizationPercentage(row))
+              }"
+            ></div>
+          </div>
+          <span class="utilization-text">
+            {{ getUtilizationPercentage(row) }}%
+          </span>
+        </div>
       </template>
 
       <template #cell-spend_category="{ value }">
@@ -763,6 +830,33 @@ const tableColumns = [
 .action-buttons {
   display: flex;
   gap: var(--spacing-2);
+}
+
+.utilization-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 120px;
+}
+
+.utilization-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: var(--color-gray-100);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.utilization-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.utilization-text {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  min-width: 36px;
+  text-align: right;
 }
 
 .form-row {
