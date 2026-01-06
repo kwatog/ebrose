@@ -308,3 +308,21 @@ def test_password_change_same_as_current_fails(client, regular_user, user_token)
         cookies={"access_token": user_token}
     )
     assert response.status_code == 400
+
+
+def test_no_trailing_slash_redirect_on_post(client, admin_user, admin_token):
+    """Test that POST to /user-groups without trailing slash does not return 307 redirect.
+
+    This tests the fix for the issue where POST requests to endpoints without
+    trailing slashes would return 307 Temporary Redirect, breaking the request.
+    """
+    # POST without trailing slash should work directly (not redirect)
+    response = client.post(
+        "/user-groups",
+        json={"name": "Test Group", "description": "Test group for redirect check"},
+        cookies={"access_token": admin_token}
+    )
+    # Should NOT be 307 redirect - should be either success (200/201) or auth error (401/403)
+    assert response.status_code != 307, f"POST returned 307 redirect: {response.headers.get('location')}"
+    # Should be successful (201 created) or forbidden if not manager
+    assert response.status_code in [200, 201, 401, 403], f"Unexpected status: {response.status_code}"
