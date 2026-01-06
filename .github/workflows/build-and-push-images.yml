@@ -1,0 +1,10 @@
+name: Deprecated (use docker-images.yml)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deprecated workflow. Use .github/workflows/docker-images.yml instead."
