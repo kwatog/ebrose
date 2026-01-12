@@ -15,10 +15,10 @@ backend:
   replicaCount: 1  # Single replica for K8s (SQLite requires single instance)
   
   image:
-    registry: docker.io
+    registry: "localhost"
     repository: ebrose/backend
     tag: "latest"
-    pullPolicy: IfNotPresent
+    pullPolicy: Never
     
   serviceAccount:
     create: true
@@ -74,15 +74,19 @@ backend:
   
   # Environment variables (use K8s secrets for sensitive values)
   env:
-    DATABASE_URL: "sqlite:///./data/ebrose.db"
+    DATABASE_URL: "sqlite:////tmp/ebrose.db"
     SECRET_KEY: "change-this-secret-key-for-production"
     ACCESS_TOKEN_EXPIRE_MINUTES: "1440"
     LOG_LEVEL: "INFO"
-    ENVIRONMENT: "production"
+    ENVIRONMENT: "development"
     DEBUG: "false"
     DOCS_ENABLED: "false"
-    RUN_MIGRATIONS_ON_STARTUP: "true"
-    AUTO_CREATE_TABLES: "false"
+    RUN_MIGRATIONS_ON_STARTUP: "false"
+    AUTO_CREATE_TABLES: "true"
+    CREATE_ADMIN_USER: "true"
+    ADMIN_USERNAME: "admin"
+    ADMIN_PASSWORD: "admin123"
+    ADMIN_EMAIL: "admin@ebrose.local"
     
   # Required secrets (set via K8s secrets, not in values.yaml)
   # - ADMIN_PASSWORD: Admin user password
@@ -112,7 +116,7 @@ backend:
     
   # Persistence for database
   persistence:
-    enabled: true
+    enabled: false
     storageClass: ""
     accessModes:
       - ReadWriteOnce
@@ -124,10 +128,10 @@ frontend:
   replicaCount: 1  # Single replica for K8s
   
   image:
-    registry: docker.io
+    registry: "localhost"
     repository: ebrose/frontend
     tag: "latest"
-    pullPolicy: IfNotPresent
+    pullPolicy: Never
     
   serviceAccount:
     create: true
@@ -183,7 +187,7 @@ frontend:
   
   # Environment variables
   env:
-    NUXT_PUBLIC_API_BASE: "http://backend:8000"
+    NUXT_PUBLIC_API_BASE: "https://ebrose-api.kwatog.com"
     
   # Health checks
   healthCheck:
