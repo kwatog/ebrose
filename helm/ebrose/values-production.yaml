@@ -1,14 +1,13 @@
-# Production environment values
 global:
   imageRegistry: "your-registry.com"
 
 backend:
   replicaCount: 3
-  
+
   image:
     tag: "production-latest"
     pullPolicy: Always
-    
+
   resources:
     limits:
       cpu: 1000m
@@ -16,27 +15,29 @@ backend:
     requests:
       cpu: 500m
       memory: 512Mi
-      
+
   autoscaling:
     enabled: true
     minReplicas: 3
     maxReplicas: 10
     targetCPUUtilizationPercentage: 60
-      
+
   env:
     SECRET_KEY: "REPLACE-WITH-SECURE-SECRET-KEY"
     DATABASE_URL: "postgresql://user:password@postgres-service:5432/ebrose_prod"
-    
+
   corsOrigins:
     - "https://ebrose.com"
     - "https://www.ebrose.com"
     - "https://api.ebrose.com"
-    
+    - "https://ebrose.kwatog.com"
+    - "https://ebrose-api.kwatog.com"
+
+
   ingress:
     enabled: true
     className: "nginx"
     annotations:
-      nginx.ingress.kubernetes.io/rewrite-target: /
       cert-manager.io/cluster-issuer: "letsencrypt-prod"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
     hosts:
@@ -48,8 +49,7 @@ backend:
       - secretName: ebrose-api-prod-tls
         hosts:
           - api.ebrose.com
-          
-  # Production persistence
+
   persistence:
     enabled: true
     storageClass: "fast-ssd"
@@ -57,11 +57,11 @@ backend:
 
 frontend:
   replicaCount: 3
-  
+
   image:
     tag: "production-latest"
     pullPolicy: Always
-    
+
   resources:
     limits:
       cpu: 500m
@@ -69,13 +69,13 @@ frontend:
     requests:
       cpu: 250m
       memory: 256Mi
-      
+
   autoscaling:
     enabled: true
     minReplicas: 3
     maxReplicas: 10
     targetCPUUtilizationPercentage: 60
-      
+
   ingress:
     enabled: true
     className: "nginx"

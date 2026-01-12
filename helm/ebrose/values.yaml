@@ -97,6 +97,9 @@ backend:
   corsOrigins:
     - "http://localhost:3000"
     - "http://127.0.0.1:3000"
+    - "https://ebrose.kwatog.com"
+    - "https://ebrose-api.kwatog.com"
+
     
   # Health checks
   healthCheck:

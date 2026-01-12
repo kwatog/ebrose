@@ -30,12 +30,13 @@ backend:
   corsOrigins:
     - "https://staging.ebrose.com"
     - "https://api-staging.ebrose.com"
-    
+    - "https://ebrose.kwatog.com"
+    - "https://ebrose-api.kwatog.com"
+
   ingress:
     enabled: true
     className: "nginx"
     annotations:
-      nginx.ingress.kubernetes.io/rewrite-target: /
       cert-manager.io/cluster-issuer: "letsencrypt-staging"
     hosts:
       - host: api-staging.ebrose.com
@@ -72,7 +73,6 @@ frontend:
     enabled: true
     className: "nginx"
     annotations:
-      nginx.ingress.kubernetes.io/rewrite-target: /
       cert-manager.io/cluster-issuer: "letsencrypt-staging"
     hosts:
       - host: staging.ebrose.com
