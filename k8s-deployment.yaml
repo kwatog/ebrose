@@ -1,0 +1,221 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ebrose
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ebrose-backend
+  namespace: ebrose
+  labels:
+    app: ebrose-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ebrose-backend
+  template:
+    metadata:
+      labels:
+        app: ebrose-backend
+    spec:
+      containers:
+      - name: backend
+        image: localhost/ebrose/backend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          value: "sqlite:///./data/ebrose.db"
+        - name: SECRET_KEY
+          value: "development-secret-key-change-for-production"
+        - name: ACCESS_TOKEN_EXPIRE_MINUTES
+          value: "1440"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: ENVIRONMENT
+          value: "development"
+        - name: DEBUG
+          value: "false"
+        - name: DISABLE_TRAILING_SLASH_REDIRECT
+          value: "true"
+        - name: DOCS_ENABLED
+          value: "true"
+        - name: RUN_MIGRATIONS_ON_STARTUP
+          value: "false"
+        - name: AUTO_CREATE_TABLES
+          value: "true"
+        - name: CREATE_ADMIN_USER
+          value: "true"
+        - name: ADMIN_USERNAME
+          value: "admin"
+        - name: ADMIN_PASSWORD
+          value: "Admin123!"
+        - name: ADMIN_EMAIL
+          value: "admin@ebrose.local"
+        - name: ADMIN_FULL_NAME
+          value: "System Administrator"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 5
+        volumeMounts:
+        - name: backend-storage
+          mountPath: /app/data
+      volumes:
+      - name: backend-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ebrose-backend
+  namespace: ebrose
+spec:
+  selector:
+    app: ebrose-backend
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 30080
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ebrose-frontend
+  namespace: ebrose
+  labels:
+    app: ebrose-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ebrose-frontend
+  template:
+    metadata:
+      labels:
+        app: ebrose-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: localhost/ebrose/frontend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NUXT_HOST
+          value: "0.0.0.0"
+        - name: NUXT_PORT
+          value: "3000"
+        - name: NUXT_API_BASE
+          value: "http://ebrose-backend:8000"
+        - name: NUXT_PUBLIC_API_BASE
+          value: "https://ebrose-api.kwatog.com"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ebrose-frontend
+  namespace: ebrose
+spec:
+  selector:
+    app: ebrose-frontend
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30081
+  type: NodePort
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ebrose-ingress
+  namespace: ebrose
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://ebrose.kwatog.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, PUT, POST, DELETE, PATCH, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_intercept_errors off;
+      # Disable automatic trailing slash redirects
+      absolute_redirect off;
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: ebrose.local
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: ebrose-backend
+            port:
+              number: 8000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ebrose-frontend
+            port:
+              number: 3000
+  - host: ebrose.kwatog.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ebrose-frontend
+            port:
+              number: 3000
+  - host: ebrose-api.kwatog.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ebrose-backend
+            port:
+              number: 8000

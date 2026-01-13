@@ -47,8 +47,10 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- if not .Values.frontend.env.NUXT_PUBLIC_API_BASE }}
             - name: NUXT_PUBLIC_API_BASE
               value: "http://{{ include "ebrose.fullname" . }}-backend:{{ .Values.backend.service.port }}"
+            {{- end }}
           {{- if .Values.frontend.healthCheck.enabled }}
           livenessProbe:
             httpGet:

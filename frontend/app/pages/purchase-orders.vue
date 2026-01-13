@@ -86,7 +86,7 @@ const form = ref({
   start_date: '',
   end_date: '',
   total_amount: '',
-  currency: 'USD',
+  currency: 'SGD',
   spend_category: 'CAPEX',
   planned_commit_date: '',
   actual_commit_date: '',
@@ -106,7 +106,7 @@ const filterSupplier = ref('')
 const statuses = ['Open', 'Approved', 'In Progress', 'Completed', 'Cancelled']
 const spendCategories = ['CAPEX', 'OPEX']
 const poTypes = ['Standard', 'Contract', 'Blanket', 'Services']
-const currencies = ['USD', 'EUR', 'GBP']
+const currencies = ['SGD', 'USD', 'EUR', 'GBP']
 
 const statusOptions = [
   { value: null, label: 'All Statuses' },
@@ -298,7 +298,7 @@ const resetForm = () => {
     start_date: '',
     end_date: '',
     total_amount: '',
-    currency: 'USD',
+    currency: 'SGD',
     spend_category: 'CAPEX',
     planned_commit_date: '',
     actual_commit_date: '',

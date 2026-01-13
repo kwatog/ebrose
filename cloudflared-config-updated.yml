@@ -1,0 +1,18 @@
+tunnel: 38818c85-8647-4035-9725-fed1bb2896a6
+credentials-file: /etc/cloudflared/38818c85-8647-4035-9725-fed1bb2896a6.json
+ingress:
+  - hostname: otlp.kwatog.com
+    service: http://192.168.18.100:80  # Your ingress controller
+  - hostname: ssh.kwatog.com
+    service: ssh://localhost:22  # SSH access to your jump host
+  - hostname: idp.kwatog.com
+    service: http://192.168.18.100:80  # Backstage IDP via ingress
+  - hostname: unleash-api.kwatog.com
+    service: http://192.168.18.100:80  # Unleash API via ingress
+  - hostname: unleash-gui.kwatog.com
+    service: http://192.168.18.100:80  # Unleash GUI via ingress
+  - hostname: ebrose.kwatog.com
+    service: http://192.168.18.66:80  # Ebrose frontend via ingress
+  - hostname: ebrose-api.kwatog.com
+    service: http://192.168.18.66:80  # Ebrose backend API via ingress
+  - service: http_status:404

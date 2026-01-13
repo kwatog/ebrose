@@ -16,6 +16,33 @@ describe('useApiFetch', () => {
     vi.restoreAllMocks()
   })
 
+  it('adds trailing slash to URL', async () => {
+    const mockFetch = vi.fn().mockResolvedValue('success')
+    vi.stubGlobal('$fetch', mockFetch)
+
+    await useApiFetch('/test')
+    
+    expect(mockFetch).toHaveBeenCalledWith(`${apiBase}/test/`, expect.objectContaining({ credentials: 'include' }))
+  })
+
+  it('preserves existing trailing slash', async () => {
+    const mockFetch = vi.fn().mockResolvedValue('success')
+    vi.stubGlobal('$fetch', mockFetch)
+
+    await useApiFetch('/test/')
+    
+    expect(mockFetch).toHaveBeenCalledWith(`${apiBase}/test/`, expect.objectContaining({ credentials: 'include' }))
+  })
+
+  it('does not add trailing slash to file paths', async () => {
+    const mockFetch = vi.fn().mockResolvedValue('success')
+    vi.stubGlobal('$fetch', mockFetch)
+
+    await useApiFetch('/static/home.html')
+    
+    expect(mockFetch).toHaveBeenCalledWith(`${apiBase}/static/home.html`, expect.objectContaining({ credentials: 'include' }))
+  })
+
   it('performs a basic fetch', async () => {
     const mockFetch = vi.fn().mockResolvedValue('success')
     vi.stubGlobal('$fetch', mockFetch)
@@ -23,7 +50,7 @@ describe('useApiFetch', () => {
     const result = await useApiFetch('/test')
     
     expect(result).toBe('success')
-    expect(mockFetch).toHaveBeenCalledWith(`${apiBase}/test`, expect.objectContaining({ credentials: 'include' }))
+    expect(mockFetch).toHaveBeenCalledWith(`${apiBase}/test/`, expect.objectContaining({ credentials: 'include' }))
   })
 
   it('retries on 401 token expiry', async () => {
@@ -41,9 +68,9 @@ describe('useApiFetch', () => {
     
     expect(result).toBe('retry-success')
     expect(mockFetch).toHaveBeenCalledTimes(3)
-    expect(mockFetch).toHaveBeenNthCalledWith(1, `${apiBase}/protected`, expect.anything())
-    expect(mockFetch).toHaveBeenNthCalledWith(2, `${apiBase}/auth/refresh`, expect.objectContaining({ method: 'POST' }))
-    expect(mockFetch).toHaveBeenNthCalledWith(3, `${apiBase}/protected`, expect.anything())
+    expect(mockFetch).toHaveBeenNthCalledWith(1, `${apiBase}/protected/`, expect.anything())
+    expect(mockFetch).toHaveBeenNthCalledWith(2, `${apiBase}/auth/refresh/`, expect.objectContaining({ method: 'POST' }))
+    expect(mockFetch).toHaveBeenNthCalledWith(3, `${apiBase}/protected/`, expect.anything())
   })
 
   it('fails if refresh fails', async () => {

@@ -77,7 +77,7 @@ const form = ref({
   description: '',
   spend_category: 'OPEX',
   requested_amount: '',
-  currency: 'USD',
+  currency: 'SGD',
   planned_commit_date: '',
   status: 'Draft'
 })
@@ -96,6 +96,7 @@ const statusOptions = [
 ]
 
 const currencyOptions = [
+  { value: 'SGD', label: 'SGD' },
   { value: 'USD', label: 'USD' },
   { value: 'EUR', label: 'EUR' },
   { value: 'GBP', label: 'GBP' }
@@ -186,7 +187,7 @@ const resetForm = () => {
     description: '',
     spend_category: 'OPEX',
     requested_amount: '',
-    currency: 'USD',
+    currency: 'SGD',
     planned_commit_date: '',
     status: 'Draft'
   }

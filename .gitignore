@@ -89,6 +89,9 @@ temp/
 cookies.txt
 headers.txt
 
+# Docker images
+*.tar
+
 # Local/variant files (do not commit)
 **/*-SER5.*
 **/*-SER5

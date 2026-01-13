@@ -59,12 +59,13 @@ const form = ref({
   title: '',
   description: '',
   budget_amount: '',
-  currency: 'USD',
+  currency: 'SGD',
   fiscal_year: new Date().getFullYear(),
   owner_group_id: 0
 })
 
 const currencyOptions = [
+  { value: 'SGD', label: 'SGD' },
   { value: 'USD', label: 'USD' },
   { value: 'EUR', label: 'EUR' },
   { value: 'GBP', label: 'GBP' }
@@ -124,7 +125,7 @@ const resetForm = () => {
     title: '',
     description: '',
     budget_amount: '',
-    currency: 'USD',
+    currency: 'SGD',
     fiscal_year: new Date().getFullYear(),
     owner_group_id: groups.value[0]?.id || 0
   }
