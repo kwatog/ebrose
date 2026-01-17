@@ -89,6 +89,10 @@ const isAdminOrManager = computed(() => {
   return user.value && ['Admin', 'Manager'].includes(user.value.role)
 })
 
+const isAdmin = computed(() => {
+  return user.value && user.value.role === 'Admin'
+})
+
 // Use route reactively
 const currentPath = computed(() => route.path)
 
@@ -223,6 +227,7 @@ const closeMobileMenu = () => {
                   :class="{ 'is-visible': adminDropdownOpen }"
                   role="menu"
                 >
+                  <NuxtLink v-if="isAdmin" to="/admin/users" class="nav-dropdown-item" @click="closeMobileMenu" role="menuitem">Users</NuxtLink>
                   <NuxtLink to="/admin/groups" class="nav-dropdown-item" @click="closeMobileMenu" role="menuitem">User Groups</NuxtLink>
                   <NuxtLink to="/admin/audit" class="nav-dropdown-item" @click="closeMobileMenu" role="menuitem">Audit Logs</NuxtLink>
                 </div>

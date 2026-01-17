@@ -86,9 +86,22 @@ spec:
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.backend.affinity }}
+      {{- if or .Values.backend.affinity (and .Values.backend.persistence.enabled .Values.backend.persistence.nodeAffinity) }}
       affinity:
-        {{- toYaml . | nindent 8 }}
+        {{- if .Values.backend.affinity }}
+        {{- toYaml .Values.backend.affinity | nindent 8 }}
+        {{- else if and .Values.backend.persistence.enabled .Values.backend.persistence.nodeAffinity }}
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      {{- range .Values.backend.persistence.nodeAffinity.nodes }}
+                      - {{ . | quote }}
+                      {{- end }}
+        {{- end }}
       {{- end }}
       {{- with .Values.backend.tolerations }}
       tolerations:

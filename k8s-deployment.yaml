@@ -81,7 +81,10 @@ spec:
           mountPath: /app/data
       volumes:
       - name: backend-storage
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: ebrose-backend-data
+      nodeSelector:
+        node-role.kubernetes.io/dedicated: ebrose
 ---
 apiVersion: v1
 kind: Service
@@ -148,6 +151,8 @@ spec:
             port: 3000
           initialDelaySeconds: 15
           periodSeconds: 5
+      nodeSelector:
+        node-role.kubernetes.io/dedicated: ebrose
 ---
 apiVersion: v1
 kind: Service

@@ -1,0 +1,32 @@
+{{- if and .Values.backend.enabled .Values.backend.persistence.enabled (not .Values.backend.persistence.storageClass) }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "ebrose.fullname" . }}-backend-data-pv
+  labels:
+    {{- include "ebrose.backend.labels" . | nindent 4 }}
+spec:
+  capacity:
+    storage: {{ .Values.backend.persistence.size | quote }}
+  volumeMode: Filesystem
+  accessModes:
+    {{- range .Values.backend.persistence.accessModes }}
+    - {{ . | quote }}
+    {{- end }}
+  persistentVolumeReclaimPolicy: Retain
+  {{- if .Values.backend.persistence.nodeAffinity }}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                {{- range .Values.backend.persistence.nodeAffinity.nodes }}
+                - {{ . | quote }}
+                {{- end }}
+  {{- end }}
+  hostPath:
+    path: {{ .Values.backend.persistence.hostPath | default "/data/ebrose/backend" }}
+    type: DirectoryOrCreate
+{{- end }}

@@ -74,7 +74,7 @@ backend:
   
   # Environment variables (use K8s secrets for sensitive values)
   env:
-    DATABASE_URL: "sqlite:////tmp/ebrose.db"
+    DATABASE_URL: "sqlite:////app/data/ebrose.db"
     SECRET_KEY: "change-this-secret-key-for-production"
     ACCESS_TOKEN_EXPIRE_MINUTES: "1440"
     LOG_LEVEL: "INFO"
@@ -116,11 +116,15 @@ backend:
     
   # Persistence for database
   persistence:
-    enabled: false
+    enabled: true
     storageClass: ""
     accessModes:
       - ReadWriteOnce
     size: 1Gi
+    hostPath: /data/ebrose/backend
+    nodeAffinity:
+      nodes:
+        - k8s-worker-04
 
 # Frontend configuration  
 frontend:

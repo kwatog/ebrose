@@ -157,9 +157,14 @@ const closeModals = () => {
 const createItem = async () => {
   try {
     loading.value = true
+    // Remove commas from budget_amount before sending
+    const cleanedForm = {
+      ...form.value,
+      budget_amount: form.value.budget_amount.replace(/,/g, '')
+    }
     await useApiFetch('/budget-items/', {
       method: 'POST',
-      body: form.value
+      body: cleanedForm
     })
     await fetchItems()
     closeModals()
@@ -175,12 +180,12 @@ const updateItem = async () => {
   if (!selectedItem.value) return
   try {
     loading.value = true
-    await useApiFetch(`/budget-items/${selectedItem.value.id}`, {
+    await useApiFetch(`/budget-items/${selectedItem.value.id}/`, {
       method: 'PUT',
       body: {
         title: form.value.title,
         description: form.value.description,
-        budget_amount: form.value.budget_amount,
+        budget_amount: form.value.budget_amount.replace(/,/g, ''),
         currency: form.value.currency,
         fiscal_year: form.value.fiscal_year
       }
@@ -201,7 +206,7 @@ const deleteItem = async (item: BudgetItem) => {
   }
   try {
     loading.value = true
-    await useApiFetch(`/budget-items/${item.id}`, {
+    await useApiFetch(`/budget-items/${item.id}/`, {
       method: 'DELETE'
     })
     await fetchItems()

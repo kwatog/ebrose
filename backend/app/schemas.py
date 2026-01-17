@@ -143,9 +143,22 @@ class BudgetItemBase(BaseModel):
     @field_validator('budget_amount', mode='before')
     @classmethod
     def round_budget_amount(cls, v):
-        if isinstance(v, float):
+        if v is None or v == '':
+            raise ValueError('budget_amount is required and cannot be empty')
+
+        # Handle string inputs - remove commas and whitespace
+        if isinstance(v, str):
+            v = v.replace(',', '').strip()
+            if not v:
+                raise ValueError('budget_amount cannot be empty')
+
+        # Convert to Decimal with proper error handling
+        try:
+            if isinstance(v, float):
+                return Decimal(str(v)).quantize(Decimal('0.01'))
             return Decimal(str(v)).quantize(Decimal('0.01'))
-        return Decimal(str(v)).quantize(Decimal('0.01'))
+        except (ValueError, ArithmeticError) as e:
+            raise ValueError(f'Invalid budget_amount: must be a valid number')
 
 class BudgetItemCreate(BudgetItemBase):
     pass
