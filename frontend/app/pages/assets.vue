@@ -95,7 +95,7 @@ const groupOptions = computed(() =>
 const fetchItems = async () => {
   try {
     loading.value = true
-    const data = await useApiFetch('/assets', { method: 'GET' })
+    const data = await useApiFetch('/assets/', { method: 'GET' })
     items.value = data as Asset[]
     error.value = null
   } catch (e: any) {
@@ -111,7 +111,7 @@ const fetchItems = async () => {
 
 const fetchWBS = async () => {
   try {
-    const data = await useApiFetch('/wbs', { method: 'GET' })
+    const data = await useApiFetch('/wbs/', { method: 'GET' })
     wbsItems.value = data as WBS[]
   } catch (e: any) {
     console.error('Failed to fetch WBS items:', e)
@@ -120,7 +120,7 @@ const fetchWBS = async () => {
 
 const fetchGroups = async () => {
   try {
-    const data = await useApiFetch('/groups', { method: 'GET' })
+    const data = await useApiFetch('/groups/', { method: 'GET' })
     groups.value = data as Group[]
     if (groups.value.length > 0 && form.value.owner_group_id === 0) {
       form.value.owner_group_id = groups.value[0].id
@@ -239,7 +239,7 @@ const createItem = async () => {
     }
 
     loading.value = true
-    await useApiFetch('/assets', {
+    await useApiFetch('/assets/', {
       method: 'POST',
       body: form.value
     })

@@ -90,7 +90,7 @@ const groupOptions = computed(() =>
 const fetchItems = async () => {
   try {
     loading.value = true
-    const data = await useApiFetch('/wbs', { method: 'GET' })
+    const data = await useApiFetch('/wbs/', { method: 'GET' })
     items.value = data as WBS[]
     error.value = null
   } catch (e: any) {
@@ -106,7 +106,7 @@ const fetchItems = async () => {
 
 const fetchLineItems = async () => {
   try {
-    const data = await useApiFetch('/business-case-line-items', { method: 'GET' })
+    const data = await useApiFetch('/business-case-line-items/', { method: 'GET' })
     lineItems.value = data as LineItem[]
   } catch (e: any) {
     console.error('Failed to fetch line items:', e)
@@ -115,7 +115,7 @@ const fetchLineItems = async () => {
 
 const fetchGroups = async () => {
   try {
-    const data = await useApiFetch('/groups', { method: 'GET' })
+    const data = await useApiFetch('/groups/', { method: 'GET' })
     groups.value = data as Group[]
   } catch (e: any) {
     console.error('Failed to fetch groups:', e)
@@ -206,7 +206,7 @@ const createItem = async () => {
     }
 
     loading.value = true
-    await useApiFetch('/wbs', {
+    await useApiFetch('/wbs/', {
       method: 'POST',
       body: form.value
     })

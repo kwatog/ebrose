@@ -56,11 +56,11 @@ const fetchDashboardData = async () => {
       resourcesData,
       businessCasesData
     ] = await Promise.all([
-      useApiFetch('/budget-items', { method: 'GET' }).catch(() => []),
-      useApiFetch('/purchase-orders', { method: 'GET' }).catch(() => []),
-      useApiFetch('/goods-receipts', { method: 'GET' }).catch(() => []),
-      useApiFetch('/resources', { method: 'GET' }).catch(() => []),
-      useApiFetch('/business-cases', { method: 'GET' }).catch(() => [])
+      useApiFetch('/budget-items/', { method: 'GET' }).catch(() => []),
+      useApiFetch('/purchase-orders/', { method: 'GET' }).catch(() => []),
+      useApiFetch('/goods-receipts/', { method: 'GET' }).catch(() => []),
+      useApiFetch('/resources/', { method: 'GET' }).catch(() => []),
+      useApiFetch('/business-cases/', { method: 'GET' }).catch(() => [])
     ])
 
     budgetItems.value = budgetItemsData as any[]

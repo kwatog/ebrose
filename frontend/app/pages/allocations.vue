@@ -260,7 +260,7 @@ const createItem = async () => {
     }
 
     loading.value = true
-    await useApiFetch('/allocations', {
+    await useApiFetch('/allocations/', {
       method: 'POST',
       body: form.value
     })

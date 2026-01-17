@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { CURRENCIES, CURRENCY_OPTIONS, DEFAULT_CURRENCY, SPEND_CATEGORIES, SPEND_CATEGORY_OPTIONS, PO_TYPES, PO_TYPE_OPTIONS, STATUSES, STATUS_OPTIONS } from '~/composables/useConstants'
+
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
 const userCookie = useCookie('user_info')
@@ -86,7 +88,7 @@ const form = ref({
   start_date: '',
   end_date: '',
   total_amount: '',
-  currency: 'SGD',
+  currency: DEFAULT_CURRENCY,
   spend_category: 'CAPEX',
   planned_commit_date: '',
   actual_commit_date: '',
@@ -103,14 +105,9 @@ const filterAsset = ref<number | null>(null)
 const filterSpendCategory = ref<string | null>(null)
 const filterSupplier = ref('')
 
-const statuses = ['Open', 'Approved', 'In Progress', 'Completed', 'Cancelled']
-const spendCategories = ['CAPEX', 'OPEX']
-const poTypes = ['Standard', 'Contract', 'Blanket', 'Services']
-const currencies = ['SGD', 'USD', 'EUR', 'GBP']
-
 const statusOptions = [
   { value: null, label: 'All Statuses' },
-  ...statuses.map(s => ({ value: s, label: s }))
+  ...STATUS_OPTIONS
 ]
 
 const assetOptions = computed(() => [
@@ -120,27 +117,27 @@ const assetOptions = computed(() => [
 
 const spendCategoryOptions = [
   { value: null, label: 'All Categories' },
-  ...spendCategories.map(sc => ({ value: sc, label: sc }))
+  ...SPEND_CATEGORY_OPTIONS
 ]
 
 const assetSelectOptions = computed(() =>
   assets.value.map(a => ({ value: a.id, label: a.asset_code }))
 )
 
-const currencyOptions = currencies.map(c => ({ value: c, label: c }))
+const currencyOptions = CURRENCY_OPTIONS
 const poTypeOptions = [
   { value: '', label: 'Select type' },
-  ...poTypes.map(pt => ({ value: pt, label: pt }))
+  ...PO_TYPE_OPTIONS
 ]
 
-const spendCategorySelectOptions = spendCategories.map(sc => ({ value: sc, label: sc }))
-const statusSelectOptions = statuses.map(s => ({ value: s, label: s }))
+const spendCategorySelectOptions = SPEND_CATEGORY_OPTIONS
+const statusSelectOptions = STATUS_OPTIONS
 
 // Fetch data
 const fetchItems = async () => {
   try {
     loading.value = true
-    const data = await useApiFetch('/purchase-orders', { method: 'GET' })
+    const data = await useApiFetch('/purchase-orders/', { method: 'GET' })
     items.value = data as PurchaseOrder[]
     error.value = null
   } catch (e: any) {
@@ -156,7 +153,7 @@ const fetchItems = async () => {
 
 const fetchAssets = async () => {
   try {
-    const data = await useApiFetch('/assets', { method: 'GET' })
+    const data = await useApiFetch('/assets/', { method: 'GET' })
     assets.value = data as Asset[]
   } catch (e: any) {
     console.error('Failed to fetch assets:', e)
@@ -165,7 +162,7 @@ const fetchAssets = async () => {
 
 const fetchGroups = async () => {
   try {
-    const data = await useApiFetch('/groups', { method: 'GET' })
+    const data = await useApiFetch('/groups/', { method: 'GET' })
     groups.value = data as Group[]
   } catch (e: any) {
     console.error('Failed to fetch groups:', e)
@@ -174,7 +171,7 @@ const fetchGroups = async () => {
 
 const fetchGoodsReceipts = async () => {
   try {
-    const data = await useApiFetch('/goods-receipts', { method: 'GET' })
+    const data = await useApiFetch('/goods-receipts/', { method: 'GET' })
     goodsReceipts.value = data as GoodsReceipt[]
   } catch (e: any) {
     console.error('Failed to fetch goods receipts:', e)
@@ -298,7 +295,7 @@ const resetForm = () => {
     start_date: '',
     end_date: '',
     total_amount: '',
-    currency: 'SGD',
+    currency: DEFAULT_CURRENCY,
     spend_category: 'CAPEX',
     planned_commit_date: '',
     actual_commit_date: '',
@@ -363,7 +360,7 @@ const createItem = async () => {
     }
 
     loading.value = true
-    await useApiFetch('/purchase-orders', {
+    await useApiFetch('/purchase-orders/', {
       method: 'POST',
       body: form.value
     })

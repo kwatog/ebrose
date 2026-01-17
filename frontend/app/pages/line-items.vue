@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY, LINE_ITEM_STATUS_OPTIONS, SPEND_CATEGORIES } from '~/composables/useConstants'
+
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
 const userInfo = useCookie('user_info')
@@ -77,30 +79,14 @@ const form = ref({
   description: '',
   spend_category: 'OPEX',
   requested_amount: '',
-  currency: 'SGD',
+  currency: DEFAULT_CURRENCY,
   planned_commit_date: '',
   status: 'Draft'
 })
 
-const spendCategoryOptions = [
-  { value: 'CAPEX', label: 'CAPEX' },
-  { value: 'OPEX', label: 'OPEX' }
-]
-
-const statusOptions = [
-  { value: 'Draft', label: 'Draft' },
-  { value: 'Submitted', label: 'Submitted' },
-  { value: 'Approved', label: 'Approved' },
-  { value: 'Rejected', label: 'Rejected' },
-  { value: 'Allocated', label: 'Allocated' }
-]
-
-const currencyOptions = [
-  { value: 'SGD', label: 'SGD' },
-  { value: 'USD', label: 'USD' },
-  { value: 'EUR', label: 'EUR' },
-  { value: 'GBP', label: 'GBP' }
-]
+const spendCategoryOptions = SPEND_CATEGORIES.map(s => ({ value: s, label: s }))
+const statusOptions = LINE_ITEM_STATUS_OPTIONS
+const currencyOptions = CURRENCY_OPTIONS
 
 const businessCaseOptions = computed(() => 
   businessCases.value.map(bc => ({ value: bc.id, label: bc.title }))
@@ -126,7 +112,7 @@ const filterSpendCategoryOptions = computed(() => [
 
 const fetchBusinessCases = async () => {
   try {
-    const res = await useApiFetch<BusinessCase[]>('/business-cases?limit=100')
+    const res = await useApiFetch<BusinessCase[]>('/business-cases/?limit=100')
     businessCases.value = res as any
   } catch (e: any) {
     console.error('Failed to load business cases:', e)
@@ -135,7 +121,7 @@ const fetchBusinessCases = async () => {
 
 const fetchBudgetItems = async () => {
   try {
-    const res = await useApiFetch<BudgetItem[]>('/budget-items?limit=100')
+    const res = await useApiFetch<BudgetItem[]>('/budget-items/?limit=100')
     budgetItems.value = res as any
   } catch (e: any) {
     console.error('Failed to load budget items:', e)
@@ -144,7 +130,7 @@ const fetchBudgetItems = async () => {
 
 const fetchGroups = async () => {
   try {
-    const res = await useApiFetch<UserGroup[]>('/user-groups')
+    const res = await useApiFetch<UserGroup[]>('/user-groups/')
     groups.value = res as any
     if (groups.value.length > 0 && form.value.owner_group_id === 0) {
       form.value.owner_group_id = groups.value[0].id
@@ -187,7 +173,7 @@ const resetForm = () => {
     description: '',
     spend_category: 'OPEX',
     requested_amount: '',
-    currency: 'SGD',
+    currency: DEFAULT_CURRENCY,
     planned_commit_date: '',
     status: 'Draft'
   }
@@ -225,7 +211,7 @@ const closeModals = () => {
 const createItem = async () => {
   try {
     loading.value = true
-    await useApiFetch('/business-case-line-items', {
+    await useApiFetch('/business-case-line-items/', {
       method: 'POST',
       body: form.value
     })

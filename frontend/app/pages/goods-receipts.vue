@@ -216,7 +216,7 @@ const createItem = async () => {
     }
 
     loading.value = true
-    await useApiFetch('/goods-receipts', {
+    await useApiFetch('/goods-receipts/', {
       method: 'POST',
       body: form.value
     })

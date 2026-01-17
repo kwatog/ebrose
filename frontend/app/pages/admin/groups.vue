@@ -81,7 +81,7 @@ const userOptions = computed(() => {
 const fetchGroups = async () => {
   try {
     loading.value = true
-    const res = await useApiFetch<UserGroup[]>('/user-groups')
+    const res = await useApiFetch<UserGroup[]>('/user-groups/')
     groups.value = res as any
     error.value = null
   } catch (e: any) {
@@ -96,7 +96,7 @@ const fetchGroups = async () => {
 
 const fetchUsers = async () => {
   try {
-    const res = await useApiFetch<User[]>('/users')
+    const res = await useApiFetch<User[]>('/users/')
     users.value = res as any
   } catch (e: any) {
     console.error('Failed to load users:', e)
@@ -105,7 +105,7 @@ const fetchUsers = async () => {
 
 const fetchGroupMembers = async (groupId: number) => {
   try {
-    const res = await useApiFetch<GroupMembership[]>(`/user-groups/${groupId}/members`)
+    const res = await useApiFetch<GroupMembership[]>(`/user-groups/${groupId}/members/`)
     groupMembers.value = res as any
   } catch (e: any) {
     showError('Failed to load group members')
@@ -151,7 +151,7 @@ const closeModals = () => {
 const createGroup = async () => {
   try {
     loading.value = true
-    await useApiFetch('/user-groups', {
+    await useApiFetch('/user-groups/', {
       method: 'POST',
       body: form.value
     })
@@ -169,7 +169,7 @@ const updateGroup = async () => {
   if (!selectedGroup.value) return
   try {
     loading.value = true
-    await useApiFetch(`/user-groups/${selectedGroup.value.id}`, {
+    await useApiFetch(`/user-groups/${selectedGroup.value.id}/`, {
       method: 'PUT',
       body: form.value
     })
@@ -189,7 +189,7 @@ const deleteGroup = async (group: UserGroup) => {
   }
   try {
     loading.value = true
-    await useApiFetch(`/user-groups/${group.id}`, { method: 'DELETE' })
+    await useApiFetch(`/user-groups/${group.id}/`, { method: 'DELETE' })
     await fetchGroups()
     success('Group deleted successfully!')
   } catch (e: any) {
@@ -202,7 +202,7 @@ const deleteGroup = async (group: UserGroup) => {
 const addMemberToGroup = async () => {
   if (!selectedGroup.value || !selectedUserId.value) return
   try {
-    await useApiFetch(`/user-groups/${selectedGroup.value.id}/members`, {
+    await useApiFetch(`/user-groups/${selectedGroup.value.id}/members/`, {
       method: 'POST',
       body: {
         user_id: selectedUserId.value,
@@ -225,7 +225,7 @@ const removeMemberFromGroup = async (userId: number) => {
     return
   }
   try {
-    await useApiFetch(`/user-groups/${selectedGroup.value.id}/members/${userId}`, {
+    await useApiFetch(`/user-groups/${selectedGroup.value.id}/members/${userId}/`, {
       method: 'DELETE'
     })
     await fetchGroupMembers(selectedGroup.value.id)

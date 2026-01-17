@@ -92,7 +92,7 @@ const fetchGroups = async () => {
 const fetchItems = async () => {
   try {
     loading.value = true
-    const data = await useApiFetch('/resources', { method: 'GET' })
+    const data = await useApiFetch('/resources/', { method: 'GET' })
     items.value = data as Resource[]
     error.value = null
   } catch (e: any) {
@@ -216,7 +216,7 @@ const createItem = async () => {
     }
 
     loading.value = true
-    await useApiFetch('/resources', {
+    await useApiFetch('/resources/', {
       method: 'POST',
       body: form.value
     })

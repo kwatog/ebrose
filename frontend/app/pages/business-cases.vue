@@ -153,7 +153,7 @@ const closeModals = () => {
 const createCase = async () => {
   try {
     loading.value = true
-    await useApiFetch('/business-cases', {
+    await useApiFetch('/business-cases/', {
       method: 'POST',
       body: form.value
     })

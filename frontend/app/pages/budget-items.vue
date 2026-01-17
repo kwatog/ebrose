@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY } from '~/composables/useConstants'
+
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
 const userInfo = useCookie('user_info')
@@ -59,17 +61,12 @@ const form = ref({
   title: '',
   description: '',
   budget_amount: '',
-  currency: 'SGD',
+  currency: DEFAULT_CURRENCY,
   fiscal_year: new Date().getFullYear(),
   owner_group_id: 0
 })
 
-const currencyOptions = [
-  { value: 'SGD', label: 'SGD' },
-  { value: 'USD', label: 'USD' },
-  { value: 'EUR', label: 'EUR' },
-  { value: 'GBP', label: 'GBP' }
-]
+const currencyOptions = CURRENCY_OPTIONS
 
 const fiscalYearOptions = computed(() => {
   const currentYear = new Date().getFullYear()
@@ -85,7 +82,7 @@ const groupOptions = computed(() =>
 
 const fetchGroups = async () => {
   try {
-    const res = await useApiFetch<UserGroup[]>('/user-groups')
+    const res = await useApiFetch<UserGroup[]>('/user-groups/')
     groups.value = res as any
     if (groups.value.length > 0 && form.value.owner_group_id === 0) {
       form.value.owner_group_id = groups.value[0].id
@@ -98,7 +95,7 @@ const fetchGroups = async () => {
 const fetchItems = async () => {
   try {
     loading.value = true
-    let url = '/budget-items?limit=100'
+    let url = '/budget-items/?limit=100'
     if (filterFiscalYear.value) {
       url += `&fiscal_year=${filterFiscalYear.value}`
     }
@@ -125,7 +122,7 @@ const resetForm = () => {
     title: '',
     description: '',
     budget_amount: '',
-    currency: 'SGD',
+    currency: DEFAULT_CURRENCY,
     fiscal_year: new Date().getFullYear(),
     owner_group_id: groups.value[0]?.id || 0
   }
@@ -160,7 +157,7 @@ const closeModals = () => {
 const createItem = async () => {
   try {
     loading.value = true
-    await useApiFetch('/budget-items', {
+    await useApiFetch('/budget-items/', {
       method: 'POST',
       body: form.value
     })
