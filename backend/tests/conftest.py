@@ -63,6 +63,17 @@ def admin_user(db_session):
     )
     db_session.add(user)
     db_session.flush()  # Flush to ensure ID is generated
+
+    primary_group = models.UserGroup(
+        name="Admin Primary Group",
+        description="Primary group for admin tests",
+        created_by=user.id
+    )
+    db_session.add(primary_group)
+    db_session.flush()
+
+    user.primary_group_id = primary_group.id
+
     db_session.commit()  # Commit the transaction
     db_session.refresh(user)  # Refresh to get latest state
     return user

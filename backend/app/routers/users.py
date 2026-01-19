@@ -46,8 +46,20 @@ def update_user(
         db_user.department = user_update.department
     if user_update.role and current_user.role == "Admin": # Only admin can change role
         db_user.role = user_update.role
+    if user_update.primary_group_id is not None:
+        if current_user.role != "Admin":
+            raise HTTPException(status_code=403, detail="Only Admins can update primary group")
+        if user_update.primary_group_id:
+            group = db.get(models.UserGroup, user_update.primary_group_id)
+            if not group:
+                raise HTTPException(status_code=400, detail="Primary group not found")
+        db_user.primary_group_id = user_update.primary_group_id
     if user_update.password:
         db_user.hashed_password = get_password_hash(user_update.password)
+
+    final_role = db_user.role
+    if final_role == "Admin" and not db_user.primary_group_id:
+        raise HTTPException(status_code=400, detail="Admin users must have a primary group")
         
     db.commit()
     db.refresh(db_user)

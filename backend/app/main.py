@@ -23,6 +23,7 @@ from .routers import (
     budget_items,
     business_case_line_items,
     business_cases,
+    dashboard,
     goods_receipts,
     purchase_orders,
     record_access,
@@ -183,6 +184,7 @@ app.include_router(users.router)
 app.include_router(user_groups.router)
 app.include_router(record_access.router)
 app.include_router(audit_logs.router)
+app.include_router(dashboard.router)
 app.include_router(budget_items.router)
 app.include_router(purchase_orders.router)
 app.include_router(business_cases.router)
