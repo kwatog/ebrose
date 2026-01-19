@@ -16,8 +16,8 @@ kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f 
 helm upgrade --install ebrose-dev $CHART_PATH \
     --namespace $NAMESPACE \
     --values $VALUES_FILE \
-    --set backend.image.tag=development-latest \
-    --set frontend.image.tag=development-latest \
+    --set backend.image.tag=main \
+    --set frontend.image.tag=main \
     --wait \
     --timeout 10m
 

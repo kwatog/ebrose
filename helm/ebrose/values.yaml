@@ -3,7 +3,7 @@
 # For single-replica K8s deployment, use: helm install ebrose ./helm/ebrose -f ./helm/ebrose/values.yaml
 
 global:
-  imageRegistry: ""
+  imageRegistry: "ghcr.io"
   imagePullSecrets: []
   
 nameOverride: ""
@@ -15,10 +15,10 @@ backend:
   replicaCount: 1  # Single replica for K8s (SQLite requires single instance)
   
   image:
-    registry: "localhost"
-    repository: ebrose/backend
-    tag: "latest"
-    pullPolicy: Never
+    registry: ""
+    repository: kwatog/ebrose/backend
+    tag: "main"
+    pullPolicy: Always
     
   serviceAccount:
     create: true
@@ -132,10 +132,10 @@ frontend:
   replicaCount: 1  # Single replica for K8s
   
   image:
-    registry: "localhost"
-    repository: ebrose/frontend
-    tag: "latest"
-    pullPolicy: Never
+    registry: ""
+    repository: kwatog/ebrose/frontend
+    tag: "main"
+    pullPolicy: Always
     
   serviceAccount:
     create: true

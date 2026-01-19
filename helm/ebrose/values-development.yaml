@@ -1,12 +1,12 @@
 # Development environment values
 global:
-  imageRegistry: "localhost:5000"
+  imageRegistry: "ghcr.io"
 
 backend:
   replicaCount: 1
   
   image:
-    tag: "development-latest"
+    tag: "main"
     pullPolicy: Always
     
   resources:
@@ -42,7 +42,7 @@ frontend:
   replicaCount: 1
   
   image:
-    tag: "development-latest"
+    tag: "main"
     pullPolicy: Always
     
   resources:

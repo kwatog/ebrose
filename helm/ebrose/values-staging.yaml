@@ -1,12 +1,12 @@
 # Staging environment values
 global:
-  imageRegistry: "your-registry.com"
+  imageRegistry: "ghcr.io"
 
 backend:
   replicaCount: 2
   
   image:
-    tag: "staging-latest"
+    tag: "main"
     pullPolicy: Always
     
   resources:
@@ -52,7 +52,7 @@ frontend:
   replicaCount: 2
   
   image:
-    tag: "staging-latest"
+    tag: "main"
     pullPolicy: Always
     
   resources:
