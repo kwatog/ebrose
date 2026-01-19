@@ -314,8 +314,8 @@ helm upgrade --install ebrose-staging ./helm/ebrose \
   --namespace ebrose-staging \
   --create-namespace \
   -f ./helm/ebrose/values-staging.yaml \
-  --set backend.image.tag=staging-v1.0.0 \
-  --set frontend.image.tag=staging-v1.0.0
+  --set backend.image.tag=staging-v0.7.1 \
+  --set frontend.image.tag=staging-v0.7.1
 ```
 
 #### Production
@@ -324,8 +324,8 @@ helm upgrade --install ebrose-prod ./helm/ebrose \
   --namespace ebrose-production \
   --create-namespace \
   -f ./helm/ebrose/values-production.yaml \
-  --set backend.image.tag=prod-v1.0.0 \
-  --set frontend.image.tag=prod-v1.0.0
+  --set backend.image.tag=prod-v0.7.1 \
+  --set frontend.image.tag=prod-v0.7.1
 ```
 
 ### Independent Component Deployment
