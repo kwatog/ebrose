@@ -4,6 +4,7 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
@@ -155,6 +156,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+
+class TrailingSlashMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        if path != '/' and path.endswith('/'):
+            return RedirectResponse(request.url.path.rstrip('/'), status_code=301)
+        return await call_next(request)
+
+
+app.add_middleware(TrailingSlashMiddleware)
 
 
 from sqlalchemy import text

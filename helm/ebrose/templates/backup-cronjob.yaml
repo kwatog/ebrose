@@ -1,0 +1,61 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "ebrose.fullname" . }}-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ebrose.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backup
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "ebrose.labels" . | nindent 12 }}
+            app.kubernetes.io/component: backup
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: {{ include "ebrose.fullname" . }}-backend
+          nodeSelector:
+            kubernetes.io/hostname: k8s-worker-04
+          containers:
+            - name: backup
+              image: bitnami/kubectl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  BACKUP_DIR="/app/backups"
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  DB_PATH="/app/data/ebrose.db"
+                  BACKUP_FILE="ebrose_backup_${TIMESTAMP}.db"
+
+                  mkdir -p "$BACKUP_DIR"
+
+                  cp "$DB_PATH" "${BACKUP_DIR}/${BACKUP_FILE}"
+
+                  gzip "${BACKUP_DIR}/${BACKUP_FILE}"
+
+                  find "$BACKUP_DIR" -name "*.db.gz" -mtime +30 -delete
+
+                  echo "Backup completed: ${BACKUP_FILE}.gz"
+              volumeMounts:
+                - name: backend-data
+                  mountPath: /app/data
+              resources:
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+          volumes:
+            - name: backend-data
+              persistentVolumeClaim:
+                claimName: ebrose-backend-data
