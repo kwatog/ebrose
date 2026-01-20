@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { cleanCurrencyFields } from '~/composables/useCurrency'
-import { CURRENCIES, CURRENCY_OPTIONS, DEFAULT_CURRENCY, SPEND_CATEGORIES, SPEND_CATEGORY_OPTIONS, PO_TYPES, PO_TYPE_OPTIONS, STATUSES, STATUS_OPTIONS } from '~/composables/useConstants'
+import { cleanCurrencyFields } from '@/composables/useCurrency'
+import { CURRENCIES, CURRENCY_OPTIONS, DEFAULT_CURRENCY, SPEND_CATEGORIES, SPEND_CATEGORY_OPTIONS, PO_TYPES, PO_TYPE_OPTIONS, STATUSES, STATUS_OPTIONS } from '@/composables/useConstants'
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase

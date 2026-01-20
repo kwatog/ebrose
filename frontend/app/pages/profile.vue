@@ -76,7 +76,8 @@ const changePassword = async () => {
     success('Password changed successfully')
     passwordForm.value = { current_password: '', new_password: '' }
   } catch (e: any) {
-    showError(e.data?.detail || 'Failed to change password')
+    const errorMessage = e.response?._data?.detail || e.data?.detail || e.message || 'Failed to change password'
+    showError(errorMessage)
   } finally {
     passwordLoading.value = false
   }

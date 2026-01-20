@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { cleanCurrencyFields } from '~/composables/useCurrency'
+import { cleanCurrencyFields } from '@/composables/useCurrency'
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
