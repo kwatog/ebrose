@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { cleanCurrencyFields } from '~/composables/useCurrency'
 import { CURRENCY_OPTIONS, DEFAULT_CURRENCY } from '~/composables/useConstants'
 
 const config = useRuntimeConfig()
@@ -157,11 +158,8 @@ const closeModals = () => {
 const createItem = async () => {
   try {
     loading.value = true
-    // Remove commas from budget_amount before sending
-    const cleanedForm = {
-      ...form.value,
-      budget_amount: form.value.budget_amount.replace(/,/g, '')
-    }
+    // Clean currency values before sending
+    const cleanedForm = cleanCurrencyFields(form.value, ['budget_amount'])
     await useApiFetch('/budget-items/', {
       method: 'POST',
       body: cleanedForm
@@ -180,15 +178,17 @@ const updateItem = async () => {
   if (!selectedItem.value) return
   try {
     loading.value = true
-    await useApiFetch(`/budget-items/${selectedItem.value.id}/`, {
+    // Clean currency values before sending
+    const updateData = cleanCurrencyFields({
+      title: form.value.title,
+      description: form.value.description,
+      budget_amount: form.value.budget_amount,
+      currency: form.value.currency,
+      fiscal_year: form.value.fiscal_year
+    }, ['budget_amount'])
+    await useApiFetch(`/budget-items/${selectedItem.value.id}`, {
       method: 'PUT',
-      body: {
-        title: form.value.title,
-        description: form.value.description,
-        budget_amount: form.value.budget_amount.replace(/,/g, ''),
-        currency: form.value.currency,
-        fiscal_year: form.value.fiscal_year
-      }
+      body: updateData
     })
     await fetchItems()
     closeModals()
@@ -206,7 +206,7 @@ const deleteItem = async (item: BudgetItem) => {
   }
   try {
     loading.value = true
-    await useApiFetch(`/budget-items/${item.id}/`, {
+    await useApiFetch(`/budget-items/${item.id}`, {
       method: 'DELETE'
     })
     await fetchItems()

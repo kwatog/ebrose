@@ -144,7 +144,7 @@ const updateUser = async () => {
       updateData.password = form.value.password
     }
 
-    await useApiFetch(`/users/${selectedUser.value.id}/`, {
+    await useApiFetch(`/users/${selectedUser.value.id}`, {
       method: 'PUT',
       body: updateData
     })
@@ -170,7 +170,7 @@ const deleteUser = async (user: User) => {
 
   try {
     loading.value = true
-    await useApiFetch(`/users/${user.id}/`, { method: 'DELETE' })
+    await useApiFetch(`/users/${user.id}`, { method: 'DELETE' })
     await fetchUsers()
     success('User deleted successfully!')
   } catch (e: any) {

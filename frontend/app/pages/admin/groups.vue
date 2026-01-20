@@ -169,7 +169,7 @@ const updateGroup = async () => {
   if (!selectedGroup.value) return
   try {
     loading.value = true
-    await useApiFetch(`/user-groups/${selectedGroup.value.id}/`, {
+    await useApiFetch(`/user-groups/${selectedGroup.value.id}`, {
       method: 'PUT',
       body: form.value
     })
@@ -189,7 +189,7 @@ const deleteGroup = async (group: UserGroup) => {
   }
   try {
     loading.value = true
-    await useApiFetch(`/user-groups/${group.id}/`, { method: 'DELETE' })
+    await useApiFetch(`/user-groups/${group.id}`, { method: 'DELETE' })
     await fetchGroups()
     success('Group deleted successfully!')
   } catch (e: any) {
@@ -225,7 +225,7 @@ const removeMemberFromGroup = async (userId: number) => {
     return
   }
   try {
-    await useApiFetch(`/user-groups/${selectedGroup.value.id}/members/${userId}/`, {
+    await useApiFetch(`/user-groups/${selectedGroup.value.id}/members/${userId}`, {
       method: 'DELETE'
     })
     await fetchGroupMembers(selectedGroup.value.id)

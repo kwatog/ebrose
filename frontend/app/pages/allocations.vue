@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { cleanCurrencyFields } from '~/composables/useCurrency'
+
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
 const userInfo = useCookie('user_info')
@@ -260,9 +262,11 @@ const createItem = async () => {
     }
 
     loading.value = true
+    // Clean currency values before sending
+    const cleanedForm = cleanCurrencyFields(form.value, ['expected_monthly_burn'])
     await useApiFetch('/allocations/', {
       method: 'POST',
-      body: form.value
+      body: cleanedForm
     })
     await fetchItems()
     closeModals()
@@ -278,13 +282,15 @@ const updateItem = async () => {
   if (!selectedItem.value) return
   try {
     loading.value = true
+    // Clean currency values before sending
+    const updateData = cleanCurrencyFields({
+      allocation_start: form.value.allocation_start,
+      allocation_end: form.value.allocation_end,
+      expected_monthly_burn: form.value.expected_monthly_burn
+    }, ['expected_monthly_burn'])
     await useApiFetch(`/allocations/${selectedItem.value.id}`, {
       method: 'PUT',
-      body: {
-        allocation_start: form.value.allocation_start,
-        allocation_end: form.value.allocation_end,
-        expected_monthly_burn: form.value.expected_monthly_burn
-      }
+      body: updateData
     })
     await fetchItems()
     closeModals()

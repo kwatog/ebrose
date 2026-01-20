@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { cleanCurrencyFields } from '~/composables/useCurrency'
+
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
 const userInfo = useCookie('user_info')
@@ -81,7 +83,7 @@ const filterStatusOptions = computed(() => [
 
 const fetchGroups = async () => {
   try {
-    const res = await useApiFetch<UserGroup[]>('/user-groups')
+    const res = await useApiFetch<UserGroup[]>('/user-groups/')
     groups.value = res as any
   } catch (e: any) {
     console.error('Failed to load groups:', e)
@@ -91,7 +93,7 @@ const fetchGroups = async () => {
 const fetchCases = async () => {
   try {
     loading.value = true
-    let url = '/business-cases?limit=100'
+    let url = '/business-cases/?limit=100'
     if (filterStatus.value) {
       url += `&status=${filterStatus.value}`
     }
@@ -153,9 +155,11 @@ const closeModals = () => {
 const createCase = async () => {
   try {
     loading.value = true
+    // Clean currency values before sending
+    const cleanedForm = cleanCurrencyFields(form.value, ['estimated_cost'])
     await useApiFetch('/business-cases/', {
       method: 'POST',
-      body: form.value
+      body: cleanedForm
     })
     await fetchCases()
     closeModals()
@@ -171,9 +175,11 @@ const updateCase = async () => {
   if (!selectedCase.value) return
   try {
     loading.value = true
+    // Clean currency values before sending
+    const cleanedForm = cleanCurrencyFields(form.value, ['estimated_cost'])
     await useApiFetch(`/business-cases/${selectedCase.value.id}`, {
       method: 'PUT',
-      body: form.value
+      body: cleanedForm
     })
     await fetchCases()
     closeModals()

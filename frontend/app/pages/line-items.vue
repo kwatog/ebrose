@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { cleanCurrencyFields } from '~/composables/useCurrency'
 import { CURRENCY_OPTIONS, DEFAULT_CURRENCY, LINE_ITEM_STATUS_OPTIONS, SPEND_CATEGORIES } from '~/composables/useConstants'
 
 const config = useRuntimeConfig()
@@ -143,7 +144,7 @@ const fetchGroups = async () => {
 const fetchItems = async () => {
   try {
     loading.value = true
-    let url = '/business-case-line-items?limit=100'
+    let url = '/business-case-line-items/?limit=100'
     if (filterBusinessCase.value) {
       url += `&business_case_id=${filterBusinessCase.value}`
     }
@@ -211,9 +212,11 @@ const closeModals = () => {
 const createItem = async () => {
   try {
     loading.value = true
+    // Clean currency values before sending
+    const cleanedForm = cleanCurrencyFields(form.value, ['requested_amount'])
     await useApiFetch('/business-case-line-items/', {
       method: 'POST',
-      body: form.value
+      body: cleanedForm
     })
     await fetchItems()
     closeModals()
@@ -229,17 +232,19 @@ const updateItem = async () => {
   if (!selectedItem.value) return
   try {
     loading.value = true
+    // Clean currency values before sending
+    const updateData = cleanCurrencyFields({
+      title: form.value.title,
+      description: form.value.description,
+      spend_category: form.value.spend_category,
+      requested_amount: form.value.requested_amount,
+      currency: form.value.currency,
+      planned_commit_date: form.value.planned_commit_date,
+      status: form.value.status
+    }, ['requested_amount'])
     await useApiFetch(`/business-case-line-items/${selectedItem.value.id}`, {
       method: 'PUT',
-      body: {
-        title: form.value.title,
-        description: form.value.description,
-        spend_category: form.value.spend_category,
-        requested_amount: form.value.requested_amount,
-        currency: form.value.currency,
-        planned_commit_date: form.value.planned_commit_date,
-        status: form.value.status
-      }
+      body: updateData
     })
     await fetchItems()
     closeModals()
