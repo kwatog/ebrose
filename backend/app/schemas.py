@@ -46,6 +46,7 @@ class UserBase(BaseModel):
     full_name: str
     department: Optional[str] = None
     role: Optional[str] = "User"
+    primary_group_id: Optional[int] = None
     is_active: Optional[bool] = True
 
 class UserCreate(UserBase):
@@ -56,6 +57,7 @@ class UserUpdate(BaseModel):
     department: Optional[str] = None
     role: Optional[str] = None
     password: Optional[str] = None
+    primary_group_id: Optional[int] = None
 
 class User(UserBase):
     id: int
@@ -76,6 +78,7 @@ class UserInfo(BaseModel):
     full_name: str
     role: str
     department: Optional[str] = None
+    primary_group_id: Optional[int] = None
 
 class UserResponse(BaseModel):
     message: str
@@ -482,3 +485,45 @@ class PaginatedResponse(BaseModel):
     total: int
     skip: int
     limit: int
+
+
+# --- Dashboard Summary ---
+class DashboardGroupOption(BaseModel):
+    id: int
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DashboardBudgetTotals(BaseModel):
+    current_year: int
+    previous_year: int
+    current_year_total: Decimal
+    previous_year_total: Decimal
+    current_year_count: int
+    previous_year_count: int
+
+
+class DashboardSpendTotals(BaseModel):
+    current_year: int
+    previous_year: int
+    current_year_total: Decimal
+    previous_year_total: Decimal
+
+
+class DashboardOpenPOTotals(BaseModel):
+    count: int
+    value: Decimal
+
+
+class DashboardSummary(BaseModel):
+    current_year: int
+    previous_year: int
+    group: Optional[DashboardGroupOption] = None
+    groups: List[DashboardGroupOption]
+    budgets: DashboardBudgetTotals
+    spend: DashboardSpendTotals
+    open_pos: DashboardOpenPOTotals
+    recent_grs_count: int
+    active_resources_count: int
+    pending_business_cases: int

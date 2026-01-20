@@ -71,6 +71,7 @@ def _set_auth_cookies(response: Response, *, access_token: str, user: models.Use
         "full_name": user.full_name,
         "role": user.role,
         "department": user.department,
+        "primary_group_id": user.primary_group_id,
     }
     user_info_b64 = base64.b64encode(json.dumps(user_info).encode()).decode()
     response.set_cookie(
@@ -106,6 +107,14 @@ def register(
     if not is_valid:
         raise HTTPException(status_code=400, detail=error_msg)
 
+    if user.role == "Admin" and not user.primary_group_id:
+        raise HTTPException(status_code=400, detail="Admin users must have a primary group")
+
+    if user.primary_group_id is not None:
+        primary_group = db.get(models.UserGroup, user.primary_group_id)
+        if not primary_group:
+            raise HTTPException(status_code=400, detail="Primary group not found")
+
     hashed_pw = get_password_hash(user.password)
     new_user = models.User(
         username=user.username,
@@ -114,6 +123,7 @@ def register(
         full_name=user.full_name,
         department=user.department,
         role=user.role,
+        primary_group_id=user.primary_group_id,
         created_at=now_utc(),
     )
     db.add(new_user)

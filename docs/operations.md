@@ -72,7 +72,7 @@ backend:
   replicaCount: 3
   image:
     repository: registry/ebrose/backend
-    tag: v1.0.0
+    tag: v0.7.1
   env:
     SECRET_KEY: required-in-production
     ADMIN_PASSWORD: required-in-production
@@ -96,7 +96,7 @@ frontend:
   replicaCount: 2
   image:
     repository: registry/ebrose/frontend
-    tag: v1.0.0
+    tag: v0.7.1
   env:
     API_URL: https://api.ebrose.local
 ```

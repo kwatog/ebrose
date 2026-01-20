@@ -33,12 +33,20 @@ interface User {
   full_name: string
   department?: string
   role: string
+  primary_group_id?: number | null
   is_active: boolean
   created_at?: string
   last_login?: string
 }
 
+interface UserGroup {
+  id: number
+  name: string
+  description?: string
+}
+
 const users = ref<User[]>([])
+const groups = ref<UserGroup[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
@@ -52,7 +60,8 @@ const form = ref({
   password: '',
   full_name: '',
   department: '',
-  role: 'User'
+  role: 'User',
+  primary_group_id: null as number | null
 })
 
 const roleOptions = [
@@ -60,6 +69,32 @@ const roleOptions = [
   { value: 'Manager', label: 'Manager' },
   { value: 'Admin', label: 'Admin' }
 ]
+
+const groupOptions = computed(() => [
+  { value: null, label: 'None' },
+  ...groups.value.map(group => ({ value: group.id, label: group.name }))
+])
+
+const getGroupName = (id?: number | null) => {
+  if (!id) return '—'
+  return groups.value.find(group => group.id === id)?.name || 'Unknown'
+}
+
+const ensureAdminPrimaryGroup = () => {
+  if (form.value.role === 'Admin' && !form.value.primary_group_id && groups.value.length > 0) {
+    form.value.primary_group_id = groups.value[0].id
+  }
+}
+
+const fetchGroups = async () => {
+  try {
+    const res = await useApiFetch<UserGroup[]>('/user-groups/')
+    groups.value = res as any
+    ensureAdminPrimaryGroup()
+  } catch (e: any) {
+    console.error('Failed to load groups:', e)
+  }
+}
 
 const fetchUsers = async () => {
   try {
@@ -84,8 +119,10 @@ const resetForm = () => {
     password: '',
     full_name: '',
     department: '',
-    role: 'User'
+    role: 'User',
+    primary_group_id: null
   }
+  ensureAdminPrimaryGroup()
 }
 
 const openCreateModal = () => {
@@ -101,7 +138,8 @@ const openEditModal = (user: User) => {
     password: '', // Don't populate password
     full_name: user.full_name,
     department: user.department || '',
-    role: user.role
+    role: user.role,
+    primary_group_id: user.primary_group_id ?? null
   }
   showEditModal.value = true
 }
@@ -114,6 +152,10 @@ const closeModals = () => {
 }
 
 const createUser = async () => {
+  if (form.value.role === 'Admin' && !form.value.primary_group_id) {
+    showError('Admin users must have a primary group')
+    return
+  }
   try {
     loading.value = true
     await useApiFetch('/auth/register/', {
@@ -132,12 +174,17 @@ const createUser = async () => {
 
 const updateUser = async () => {
   if (!selectedUser.value) return
+  if (form.value.role === 'Admin' && !form.value.primary_group_id) {
+    showError('Admin users must have a primary group')
+    return
+  }
   try {
     loading.value = true
     const updateData: any = {
       full_name: form.value.full_name,
       department: form.value.department,
-      role: form.value.role
+      role: form.value.role,
+      primary_group_id: form.value.primary_group_id
     }
     // Only include password if it's not empty
     if (form.value.password) {
@@ -190,13 +237,19 @@ const tableColumns = [
   { key: 'full_name', label: 'Full Name', sortable: true },
   { key: 'email', label: 'Email', sortable: true },
   { key: 'department', label: 'Department', sortable: true },
+  { key: 'primary_group_id', label: 'Primary Group', sortable: true },
   { key: 'role', label: 'Role', sortable: true },
   { key: 'last_login', label: 'Last Login', sortable: true },
   { key: 'actions', label: 'Actions', sortable: false }
 ]
 
 onMounted(() => {
+  fetchGroups()
   fetchUsers()
+})
+
+watch(() => form.value.role, () => {
+  ensureAdminPrimaryGroup()
 })
 </script>
 
@@ -247,6 +300,10 @@ onMounted(() => {
         >
           {{ value }}
         </BaseBadge>
+      </template>
+
+      <template #cell-primary_group_id="{ value }">
+        {{ getGroupName(value) }}
       </template>
 
       <template #cell-department="{ value }">
@@ -318,6 +375,14 @@ onMounted(() => {
           help-text="User role determines access level"
         />
 
+        <BaseSelect
+          v-model="form.primary_group_id"
+          :options="groupOptions"
+          label="Primary Group"
+          :required="form.role === 'Admin'"
+          help-text="Required for Admin users"
+        />
+
         <BaseInput
           v-model="form.password"
           label="Password"
@@ -373,6 +438,14 @@ onMounted(() => {
           required
           :disabled="selectedUser?.id === currentUser.id"
           :help-text="selectedUser?.id === currentUser.id ? 'You cannot change your own role' : ''"
+        />
+
+        <BaseSelect
+          v-model="form.primary_group_id"
+          :options="groupOptions"
+          label="Primary Group"
+          :required="form.role === 'Admin'"
+          help-text="Required for Admin users"
         />
 
         <BaseInput

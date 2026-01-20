@@ -20,6 +20,7 @@ class User(Base):
     full_name = Column(String(255))
     department = Column(String(255))
     role = Column(String(50), default="User")  # Viewer, User, Manager, Admin
+    primary_group_id = Column(Integer, ForeignKey("user_group.id"), nullable=True, index=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True))
     last_login = Column(DateTime(timezone=True), nullable=True)

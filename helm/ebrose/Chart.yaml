@@ -1,8 +1,8 @@
 apiVersion: v2
 name: ebrose
 description: Ebrose Procurement Tracking System
-version: 1.0.0
-appVersion: "1.0.0"
+version: 0.7.1
+appVersion: "0.7.1"
 keywords:
   - procurement
   - tracking

@@ -121,6 +121,10 @@ def seed_data():
         db.flush()
         print(f"✓ Created IT group (ID: {it_group.id})")
 
+        admin_user.primary_group_id = it_group.id
+        manager_user.primary_group_id = finance_group.id
+        regular_user.primary_group_id = ops_group.id
+
         # 5. Add users to groups
         db.add(models.UserGroupMembership(
             user_id=manager_user.id,

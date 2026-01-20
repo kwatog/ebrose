@@ -1,11 +1,11 @@
 global:
-  imageRegistry: "your-registry.com"
+  imageRegistry: "ghcr.io"
 
 backend:
   replicaCount: 3
 
   image:
-    tag: "production-latest"
+    tag: "v0.7.1"
     pullPolicy: Always
 
   resources:
@@ -59,7 +59,7 @@ frontend:
   replicaCount: 3
 
   image:
-    tag: "production-latest"
+    tag: "v0.7.1"
     pullPolicy: Always
 
   resources:

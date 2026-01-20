@@ -9,98 +9,125 @@ import {
   CubeIcon,
 } from '@heroicons/vue/24/outline'
 
+interface DashboardGroup {
+  id: number
+  name: string
+}
+
+interface DashboardSummary {
+  current_year: number
+  previous_year: number
+  group?: DashboardGroup | null
+  groups: DashboardGroup[]
+  budgets: {
+    current_year_total: string
+    previous_year_total: string
+    current_year_count: number
+    previous_year_count: number
+  }
+  spend: {
+    current_year_total: string
+    previous_year_total: string
+  }
+  open_pos: {
+    count: number
+    value: string
+  }
+  recent_grs_count: number
+  active_resources_count: number
+  pending_business_cases: number
+}
+
 const userCookie = useCookie('user_info')
 const userData = ref<Record<string, any> | null>(null)
+const selectedGroupId = ref<number | null>(null)
 
-onMounted(() => {
-  if (userCookie.value) {
-    try {
-      const cookieStr = String(userCookie.value).replace(/"/g, '')
-      const decoded = decodeURIComponent(atob(cookieStr))
-      userData.value = JSON.parse(decoded)
-    } catch {
-      userData.value = null
-    }
-  }
-})
-
-// Statistics data
-const stats = ref({
-  totalBudget: 0,
-  totalSpend: 0,
-  openPOsCount: 0,
-  openPOsValue: 0,
-  recentGRsCount: 0,
-  activeResourcesCount: 0,
-  pendingBusinessCases: 0
-})
+const summary = ref<DashboardSummary | null>(null)
 
 const recentGoodsReceipts = ref<any[]>([])
 const recentPurchaseOrders = ref<any[]>([])
-const budgetItems = ref<any[]>([])
 
 const loading = ref(true)
 const error = ref<string | null>(null)
 
+const groupOptions = computed(() => summary.value?.groups.map(group => ({
+  value: group.id,
+  label: group.name
+})) || [])
+
+const selectedGroupName = computed(() => summary.value?.group?.name || 'Unknown')
+
+const currentYear = computed(() => summary.value?.current_year || new Date().getFullYear())
+const previousYear = computed(() => summary.value?.previous_year || (currentYear.value - 1))
+
+const stats = computed(() => ({
+  totalBudget: summary.value?.budgets.current_year_total || '0',
+  previousBudget: summary.value?.budgets.previous_year_total || '0',
+  currentBudgetCount: summary.value?.budgets.current_year_count || 0,
+  previousBudgetCount: summary.value?.budgets.previous_year_count || 0,
+  totalSpend: summary.value?.spend.current_year_total || '0',
+  previousSpend: summary.value?.spend.previous_year_total || '0',
+  openPOsCount: summary.value?.open_pos.count || 0,
+  openPOsValue: summary.value?.open_pos.value || '0',
+  recentGRsCount: summary.value?.recent_grs_count || 0,
+  activeResourcesCount: summary.value?.active_resources_count || 0,
+  pendingBusinessCases: summary.value?.pending_business_cases || 0
+}))
+
+const currentBudgetValue = computed(() => parseFloat(stats.value.totalBudget) || 0)
+const currentSpendValue = computed(() => parseFloat(stats.value.totalSpend) || 0)
+
+const utilizationTitle = computed(() => (
+  `Budget Utilization · ${selectedGroupName.value} · FY${currentYear.value}`
+))
+
+const fetchDashboardSummary = async (groupId?: number | null) => {
+  const params = new URLSearchParams()
+  if (groupId) {
+    params.set('owner_group_id', String(groupId))
+  }
+  const query = params.toString()
+  const res = await useApiFetch<DashboardSummary>(`/dashboard/summary${query ? `?${query}` : ''}`)
+  summary.value = res as any
+  const resolvedGroupId = summary.value?.group?.id ?? null
+  if (resolvedGroupId !== selectedGroupId.value) {
+    selectedGroupId.value = resolvedGroupId
+  }
+}
+
+const fetchRecentActivity = async (groupId: number | null) => {
+  if (!groupId) {
+    recentGoodsReceipts.value = []
+    recentPurchaseOrders.value = []
+    return
+  }
+
+  const [posData, grsData] = await Promise.all([
+    useApiFetch(`/purchase-orders/?limit=5&owner_group_id=${groupId}`, { method: 'GET' }).catch(() => []),
+    useApiFetch(`/goods-receipts/?limit=5&owner_group_id=${groupId}`, { method: 'GET' }).catch(() => [])
+  ])
+
+  const pos = posData as any[]
+  const grs = grsData as any[]
+
+  recentPurchaseOrders.value = pos
+    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+    .slice(0, 5)
+
+  recentGoodsReceipts.value = grs
+    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+    .slice(0, 5)
+}
+
 // Fetch all data
-const fetchDashboardData = async () => {
+const fetchDashboardData = async (groupId?: number | null) => {
   try {
     loading.value = true
     error.value = null
 
-    // Fetch data in parallel
-    const [
-      budgetItemsData,
-      posData,
-      grsData,
-      resourcesData,
-      businessCasesData
-    ] = await Promise.all([
-      useApiFetch('/budget-items/', { method: 'GET' }).catch(() => []),
-      useApiFetch('/purchase-orders/', { method: 'GET' }).catch(() => []),
-      useApiFetch('/goods-receipts/', { method: 'GET' }).catch(() => []),
-      useApiFetch('/resources/', { method: 'GET' }).catch(() => []),
-      useApiFetch('/business-cases/', { method: 'GET' }).catch(() => [])
-    ])
-
-    budgetItems.value = budgetItemsData as any[]
-    const pos = posData as any[]
-    const grs = grsData as any[]
-    const resources = resourcesData as any[]
-    const businessCases = businessCasesData as any[]
-
-    // Calculate statistics
-    stats.value.totalBudget = budgetItems.value.reduce((sum, item) => sum + (parseFloat(item.budget_amount) || 0), 0)
-
-    const openPOs = pos.filter(po => ['Open', 'Approved', 'In Progress'].includes(po.status))
-    stats.value.openPOsCount = openPOs.length
-    stats.value.openPOsValue = openPOs.reduce((sum, po) => sum + (parseFloat(po.total_amount) || 0), 0)
-
-    stats.value.totalSpend = pos.reduce((sum, po) => sum + (parseFloat(po.total_amount) || 0), 0)
-
-    stats.value.recentGRsCount = grs.filter(gr => {
-      if (!gr.created_at) return false
-      const createdDate = new Date(gr.created_at)
-      const thirtyDaysAgo = new Date()
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      return createdDate >= thirtyDaysAgo
-    }).length
-
-    stats.value.activeResourcesCount = resources.filter(r => r.status === 'Active').length
-
-    stats.value.pendingBusinessCases = businessCases.filter(bc =>
-      ['Draft', 'Submitted', 'Under Review'].includes(bc.status)
-    ).length
-
-    // Get recent items (last 5)
-    recentGoodsReceipts.value = grs
-      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
-      .slice(0, 5)
-
-    recentPurchaseOrders.value = pos
-      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
-      .slice(0, 5)
-
+    await fetchDashboardSummary(groupId ?? selectedGroupId.value)
+    const resolvedGroupId = summary.value?.group?.id ?? null
+    await fetchRecentActivity(resolvedGroupId)
   } catch (e: any) {
     console.error('Dashboard error:', e)
     error.value = 'Failed to load dashboard data'
@@ -109,8 +136,22 @@ const fetchDashboardData = async () => {
   }
 }
 
+const handleGroupChange = async () => {
+  await fetchDashboardData(selectedGroupId.value)
+}
+
 onMounted(() => {
-  fetchDashboardData()
+  if (userCookie.value) {
+    try {
+      const cookieStr = String(userCookie.value).replace(/"/g, '')
+      const decoded = decodeURIComponent(atob(cookieStr))
+      userData.value = JSON.parse(decoded)
+      selectedGroupId.value = userData.value?.primary_group_id ?? null
+    } catch {
+      userData.value = null
+    }
+  }
+  fetchDashboardData(selectedGroupId.value)
 })
 
 // Helpers
@@ -128,8 +169,8 @@ const formatDate = (dateStr?: string) => {
 }
 
 const getUtilizationPercentage = computed(() => {
-  if (stats.value.totalBudget === 0) return 0
-  return Math.round((stats.value.totalSpend / stats.value.totalBudget) * 100)
+  if (currentBudgetValue.value === 0) return 0
+  return Math.round((currentSpendValue.value / currentBudgetValue.value) * 100)
 })
 
 const getUtilizationColor = computed(() => {
@@ -155,6 +196,21 @@ const isManager = computed(() => {
       </div>
     </div>
 
+    <div v-if="summary" class="scope-bar">
+      <div class="scope-info">
+        <div class="scope-title">Budget Scope</div>
+        <div class="scope-subtitle">FY{{ currentYear }} vs FY{{ previousYear }}</div>
+      </div>
+      <div class="scope-control">
+        <BaseSelect
+          v-model="selectedGroupId"
+          :options="groupOptions"
+          label="Owner Group"
+          @change="handleGroupChange"
+        />
+      </div>
+    </div>
+
     <div v-if="loading" class="loading-container">
       <BaseLoadingSpinner size="lg" label="Loading dashboard data..." />
       <p class="text-muted">Loading dashboard data...</p>
@@ -174,9 +230,10 @@ const isManager = computed(() => {
               <BanknotesIcon class="stat-icon-svg" />
             </div>
             <div class="stat-details">
-              <div class="stat-label">Total Budget</div>
+              <div class="stat-label">Budget (FY{{ currentYear }})</div>
               <div class="stat-value">{{ formatCurrency(stats.totalBudget) }}</div>
-              <div class="stat-meta">{{ budgetItems.length }} budget items</div>
+              <div class="stat-meta">Group: {{ selectedGroupName }} · {{ stats.currentBudgetCount }} items</div>
+              <div class="stat-meta">Prev FY{{ previousYear }}: {{ formatCurrency(stats.previousBudget) }} · {{ stats.previousBudgetCount }} items</div>
             </div>
           </div>
         </BaseCard>
@@ -188,11 +245,12 @@ const isManager = computed(() => {
               <ChartPieIcon class="stat-icon-svg" />
             </div>
             <div class="stat-details">
-              <div class="stat-label">Total Spend</div>
+              <div class="stat-label">Planned Spend (FY{{ currentYear }})</div>
               <div class="stat-value">{{ formatCurrency(stats.totalSpend) }}</div>
               <div class="stat-meta" :style="{ color: getUtilizationColor }">
-                {{ getUtilizationPercentage }}% of budget
+                {{ getUtilizationPercentage }}% of FY{{ currentYear }} budget
               </div>
+              <div class="stat-meta">Prev FY{{ previousYear }}: {{ formatCurrency(stats.previousSpend) }}</div>
             </div>
           </div>
         </BaseCard>
@@ -241,7 +299,7 @@ const isManager = computed(() => {
       </div>
 
       <!-- Budget Utilization Bar -->
-      <BaseCard title="Budget Utilization" padding="md">
+      <BaseCard :title="utilizationTitle" padding="md">
         <div class="utilization-bar-container">
           <div class="utilization-bar-bg">
             <div
@@ -373,6 +431,39 @@ const isManager = computed(() => {
 .error-text {
   color: var(--color-error);
   margin: 0;
+}
+
+.scope-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-6);
+  padding: var(--spacing-4);
+  background: var(--color-gray-50);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-gray-200);
+}
+
+.scope-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.scope-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+
+.scope-subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+}
+
+.scope-control {
+  min-width: 220px;
 }
 
 /* Statistics Grid */
@@ -601,6 +692,15 @@ const isManager = computed(() => {
 }
 
 @media (max-width: 768px) {
+  .scope-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .scope-control {
+    min-width: auto;
+  }
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
