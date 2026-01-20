@@ -17,7 +17,7 @@ backend:
   image:
     registry: ""
     repository: kwatog/ebrose/backend
-    tag: "main"
+    tag: "v0.7.1"
     pullPolicy: Always
     
   serviceAccount:
@@ -134,7 +134,7 @@ frontend:
   image:
     registry: ""
     repository: kwatog/ebrose/frontend
-    tag: "main"
+    tag: "v0.7.1"
     pullPolicy: Always
     
   serviceAccount:
