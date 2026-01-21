@@ -158,7 +158,7 @@ const createUser = async () => {
   }
   try {
     loading.value = true
-    await useApiFetch('/auth/register/', {
+    await useApiFetch('/auth/register', {
       method: 'POST',
       body: form.value
     })

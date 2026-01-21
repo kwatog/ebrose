@@ -160,7 +160,7 @@ const createItem = async () => {
     loading.value = true
     // Clean currency values before sending
     const cleanedForm = cleanCurrencyFields(form.value, ['budget_amount'])
-    await useApiFetch('/budget-items/', {
+    await useApiFetch('/budget-items', {
       method: 'POST',
       body: cleanedForm
     })

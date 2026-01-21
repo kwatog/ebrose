@@ -14,7 +14,7 @@ def list_groups(
 ):
     return db.query(models.UserGroup).all()
 
-@router.post("/", response_model=schemas.UserGroup)
+@router.post("", response_model=schemas.UserGroup)
 def create_group(
     group: schemas.UserGroupCreate,
     db: Session = Depends(get_db),

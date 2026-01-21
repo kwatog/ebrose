@@ -131,7 +131,7 @@ const fetchBudgetItems = async () => {
 
 const fetchGroups = async () => {
   try {
-    const res = await useApiFetch<UserGroup[]>('/user-groups/')
+    const res = await useApiFetch<UserGroup[]>('/user-groups')
     groups.value = res as any
     if (groups.value.length > 0 && form.value.owner_group_id === 0) {
       form.value.owner_group_id = groups.value[0].id
@@ -144,7 +144,7 @@ const fetchGroups = async () => {
 const fetchItems = async () => {
   try {
     loading.value = true
-    let url = '/business-case-line-items/?limit=100'
+    let url = '/business-case-line-items?limit=100'
     if (filterBusinessCase.value) {
       url += `&business_case_id=${filterBusinessCase.value}`
     }
@@ -214,7 +214,7 @@ const createItem = async () => {
     loading.value = true
     // Clean currency values before sending
     const cleanedForm = cleanCurrencyFields(form.value, ['requested_amount'])
-    await useApiFetch('/business-case-line-items/', {
+    await useApiFetch('/business-case-line-items', {
       method: 'POST',
       body: cleanedForm
     })

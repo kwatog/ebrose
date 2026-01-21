@@ -202,7 +202,7 @@ const deleteGroup = async (group: UserGroup) => {
 const addMemberToGroup = async () => {
   if (!selectedGroup.value || !selectedUserId.value) return
   try {
-    await useApiFetch(`/user-groups/${selectedGroup.value.id}/members/`, {
+    await useApiFetch(`/user-groups/${selectedGroup.value.id}/members`, {
       method: 'POST',
       body: {
         user_id: selectedUserId.value,

@@ -93,7 +93,7 @@ def get_allocation(
         raise HTTPException(status_code=404, detail="ResourcePOAllocation not found")
     return alloc
 
-@router.post("/", response_model=schemas.ResourcePOAllocation)
+@router.post("", response_model=schemas.ResourcePOAllocation)
 @audit_log_change(action="CREATE", table_name="resource_po_allocation")
 async def create_allocation(
     alloc: schemas.ResourcePOAllocationCreate,

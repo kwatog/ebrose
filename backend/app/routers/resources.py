@@ -91,7 +91,7 @@ def get_resource(
         raise HTTPException(status_code=404, detail="Resource not found")
     return resource
 
-@router.post("/", response_model=schemas.Resource)
+@router.post("", response_model=schemas.Resource)
 @audit_log_change(action="CREATE", table_name="resource")
 async def create_resource(
     resource: schemas.ResourceCreate,

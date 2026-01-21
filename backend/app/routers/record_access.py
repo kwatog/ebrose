@@ -21,7 +21,7 @@ def get_record_access_list(
         models.RecordAccess.record_id == record_id
     ).all()
 
-@router.post("/", response_model=schemas.RecordAccess)
+@router.post("", response_model=schemas.RecordAccess)
 def grant_access(
     access: schemas.RecordAccessCreate,
     db: Session = Depends(get_db),

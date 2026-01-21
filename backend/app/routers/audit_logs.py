@@ -7,7 +7,7 @@ from ..auth import get_db, require_role, now_utc
 
 router = APIRouter(prefix="/audit-logs", tags=["audit-logs"])
 
-@router.get("/", response_model=List[schemas.AuditLog])
+@router.get("", response_model=List[schemas.AuditLog])
 def list_audit_logs(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role("Manager"))

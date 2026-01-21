@@ -157,7 +157,7 @@ const createCase = async () => {
     loading.value = true
     // Clean currency values before sending
     const cleanedForm = cleanCurrencyFields(form.value, ['estimated_cost'])
-    await useApiFetch('/business-cases/', {
+    await useApiFetch('/business-cases', {
       method: 'POST',
       body: cleanedForm
     })

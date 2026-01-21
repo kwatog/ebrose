@@ -88,7 +88,7 @@ def get_goods_receipt(
         raise HTTPException(status_code=404, detail="GoodsReceipt not found")
     return gr
 
-@router.post("/", response_model=schemas.GoodsReceipt)
+@router.post("", response_model=schemas.GoodsReceipt)
 @audit_log_change(action="CREATE", table_name="goods_receipt")
 async def create_goods_receipt(
     gr: schemas.GoodsReceiptCreate,

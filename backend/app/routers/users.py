@@ -7,7 +7,7 @@ from ..auth import get_db, get_current_user, require_role, get_password_hash, no
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-@router.get("/", response_model=List[schemas.User])
+@router.get("", response_model=List[schemas.User])
 def list_users(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_role("User")) # Users can see other users

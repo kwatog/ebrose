@@ -217,7 +217,7 @@ const createItem = async () => {
     }
 
     loading.value = true
-    await useApiFetch('/wbs/', {
+    await useApiFetch('/wbs', {
       method: 'POST',
       body: form.value
     })

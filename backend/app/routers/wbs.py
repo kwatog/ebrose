@@ -79,7 +79,7 @@ def get_wbs(
         raise HTTPException(status_code=404, detail="WBS not found")
     return wbs
 
-@router.post("/", response_model=schemas.WBS)
+@router.post("", response_model=schemas.WBS)
 @audit_log_change(action="CREATE", table_name="wbs")
 async def create_wbs(
     wbs: schemas.WBSCreate,

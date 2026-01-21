@@ -363,7 +363,7 @@ const createItem = async () => {
     loading.value = true
     // Clean currency values before sending
     const cleanedForm = cleanCurrencyFields(form.value, ['total_amount'])
-    await useApiFetch('/purchase-orders/', {
+    await useApiFetch('/purchase-orders', {
       method: 'POST',
       body: cleanedForm
     })

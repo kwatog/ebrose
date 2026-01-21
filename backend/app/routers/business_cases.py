@@ -65,7 +65,7 @@ def get_business_case(
 
     return bc
 
-@router.post("/", response_model=schemas.BusinessCase)
+@router.post("", response_model=schemas.BusinessCase)
 @audit_log_change(action="CREATE", table_name="business_case")
 async def create_business_case(
     bc: schemas.BusinessCaseCreate,

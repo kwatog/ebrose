@@ -12,7 +12,7 @@ export function useApiFetch<T>(url: string, opts: Parameters<typeof $fetch<T>>[1
       // On 401, attempt a single refresh then retry once
       if (err?.response?.status === 401) {
         try {
-          await $fetch(`${apiBase}/auth/refresh/`, { method: 'POST', credentials: 'include' })
+          await $fetch(`${apiBase}/auth/refresh`, { method: 'POST', credentials: 'include' })
           return await $fetch<T>(`${apiBase}${url}`, { ...baseOptions, ...(opts || {}) })
         } catch (e) {
           throw err
