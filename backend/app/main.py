@@ -192,6 +192,27 @@ def health_check():
         "environment": settings.environment
     }
 
+@app.get("/debug-routes")
+def debug_routes():
+    """Returns a list of all registered routes for debugging."""
+    routes_info = []
+    for route in app.routes:
+        try:
+            routes_info.append({
+                "path": route.path,
+                "name": route.name,
+                "methods": list(route.methods) if hasattr(route, 'methods') else [],
+                "endpoint": route.endpoint.__name__
+            })
+        except AttributeError:
+            # Some routes (like Mount) might not have these attributes
+            routes_info.append({
+                "path": route.path,
+                "name": route.name,
+                "type": str(type(route))
+            })
+    return routes_info
+
 app.include_router(auth_router.router)
 app.include_router(users.router)
 app.include_router(user_groups.router)
