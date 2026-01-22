@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'helm/ebrose/Chart.yaml'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type (or "none" to use current Chart.yaml version)'
+        required: true
+        default: 'none'
+        type: choice
+        options:
+          - none
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current version from Chart.yaml
+        id: current
+        run: |
+          VERSION=$(grep '^version:' helm/ebrose/Chart.yaml | awk '{print $2}' | tr -d '"')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Calculate new version
+        id: version
+        run: |
+          CURRENT="${{ steps.current.outputs.version }}"
+          BUMP="${{ inputs.bump || 'none' }}"
+
+          if [ "$BUMP" = "none" ] || [ -z "$BUMP" ]; then
+            echo "version=$CURRENT" >> $GITHUB_OUTPUT
+            echo "Using current version: $CURRENT"
+            exit 0
+          fi
+
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          case "$BUMP" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag v${{ steps.version.outputs.version }} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update Chart.yaml version
+        if: inputs.bump != 'none'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          sed -i "s/^version:.*/version: $VERSION/" helm/ebrose/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" helm/ebrose/Chart.yaml
+
+          echo "Updated Chart.yaml:"
+          grep -E '^(version|appVersion):' helm/ebrose/Chart.yaml
+
+      - name: Update ArgoCD app image tags
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          sed -i "s/value: main$/value: v$VERSION/" ebrose-app.yaml
+
+          echo "Updated ebrose-app.yaml:"
+          grep -A1 'image.tag' ebrose-app.yaml
+
+      - name: Commit version bump
+        if: inputs.bump != 'none' && inputs.bump != ''
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add helm/ebrose/Chart.yaml ebrose-app.yaml
+          git commit -m "chore: release v$VERSION"
+          git push
+
+      - name: Commit ArgoCD update only
+        if: (inputs.bump == 'none' || inputs.bump == '') && steps.check_tag.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ebrose-app.yaml
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore: update ArgoCD to v$VERSION"
+          git push
+
+      - name: Create and push tag
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+          echo "Created tag v$VERSION"
+
+      - name: Summary
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "## Release v$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Chart.yaml version: $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- Git tag: v$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker images will be built with tag: v$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- ArgoCD app updated to use: v$VERSION" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ebrose
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/kwatog/ebrose
+    targetRevision: main
+    path: helm/ebrose
+    helm:
+      parameters:
+        - name: backend.image.tag
+          value: v0.7.7
+        - name: frontend.image.tag
+          value: v0.7.7
+        - name: backend.env.ENVIRONMENT
+          value: production
+        - name: backend.env.COOKIE_DOMAIN
+          value: ".kwatog.com"
+        - name: backend.env.COOKIE_SAMESITE
+          value: "lax"
+        - name: backend.env.COOKIE_SECURE
+          value: "true"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
