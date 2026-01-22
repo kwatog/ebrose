@@ -9,7 +9,7 @@ RUN npm install --omit=dev
 
 # Copy source code and build
 COPY . .
-RUN NODE_OPTIONS="--max-old-space-size=1024" npm run build
+RUN NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
 # Production stage
 FROM node:20-alpine AS runner

@@ -49,11 +49,11 @@ def get_accessible_gr_ids(db: Session, user: models.User) -> List[int]:
     return list(accessible_ids)
 
 @router.get("/", response_model=List[schemas.GoodsReceipt])
+@router.get("", response_model=List[schemas.GoodsReceipt], include_in_schema=False)
 def list_goods_receipts(
     skip: int = 0,
     limit: int = 100,
-    po_id: Optional[int] = None,
-    owner_group_id: Optional[int] = None,
+    po_id: int = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
@@ -88,7 +88,7 @@ def get_goods_receipt(
         raise HTTPException(status_code=404, detail="GoodsReceipt not found")
     return gr
 
-@router.post("/", response_model=schemas.GoodsReceipt)
+@router.post("", response_model=schemas.GoodsReceipt)
 @audit_log_change(action="CREATE", table_name="goods_receipt")
 async def create_goods_receipt(
     gr: schemas.GoodsReceiptCreate,

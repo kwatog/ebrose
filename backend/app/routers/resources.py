@@ -49,14 +49,13 @@ def get_accessible_resource_ids(db: Session, user: models.User) -> List[int]:
     return list(accessible_ids)
 
 @router.get("/", response_model=List[schemas.Resource])
+@router.get("", response_model=List[schemas.Resource], include_in_schema=False)
 def list_resources(
     skip: int = 0,
     limit: int = 100,
-    owner_group_id: Optional[int] = None,
-    status: Optional[str] = None,
-    vendor: Optional[str] = None,
+    status: str = None,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("User"))
+    current_user: models.User = Depends(get_current_user)
 ):
     """List all resources with pagination and filtering.
     
@@ -91,7 +90,7 @@ def get_resource(
         raise HTTPException(status_code=404, detail="Resource not found")
     return resource
 
-@router.post("/", response_model=schemas.Resource)
+@router.post("", response_model=schemas.Resource)
 @audit_log_change(action="CREATE", table_name="resource")
 async def create_resource(
     resource: schemas.ResourceCreate,

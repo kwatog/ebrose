@@ -6,7 +6,7 @@ backend:
   replicaCount: 2
   
   image:
-    tag: "main"
+    tag: "v0.7.7"
     pullPolicy: Always
     
   resources:
@@ -52,7 +52,7 @@ frontend:
   replicaCount: 2
   
   image:
-    tag: "main"
+    tag: "v0.7.7"
     pullPolicy: Always
     
   resources:

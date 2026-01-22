@@ -8,12 +8,10 @@ from ..auth import get_db, get_current_user, check_record_access, audit_log_chan
 router = APIRouter(prefix="/wbs", tags=["wbs"])
 
 @router.get("/", response_model=List[schemas.WBS])
+@router.get("", response_model=List[schemas.WBS], include_in_schema=False)
 def list_wbs(
     skip: int = 0,
     limit: int = 100,
-    business_case_line_item_id: int = None,
-    owner_group_id: int = None,
-    status: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
@@ -79,7 +77,7 @@ def get_wbs(
         raise HTTPException(status_code=404, detail="WBS not found")
     return wbs
 
-@router.post("/", response_model=schemas.WBS)
+@router.post("", response_model=schemas.WBS)
 @audit_log_change(action="CREATE", table_name="wbs")
 async def create_wbs(
     wbs: schemas.WBSCreate,

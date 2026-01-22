@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { cleanCurrencyFields } from '@/composables/useCurrency'
+
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
 const userInfo = useCookie('user_info')
@@ -86,7 +88,7 @@ const purchaseOrderFilterOptions = computed(() => [
 
 const fetchPurchaseOrders = async () => {
   try {
-    const data = await useApiFetch<PurchaseOrder[]>('/purchase-orders')
+    const data = await useApiFetch<PurchaseOrder[]>('/purchase-orders/')
     purchaseOrders.value = data as any
   } catch (e: any) {
     console.error('Failed to fetch purchase orders:', e)
@@ -95,7 +97,7 @@ const fetchPurchaseOrders = async () => {
 
 const fetchGroups = async () => {
   try {
-    const data = await useApiFetch<Group[]>('/groups')
+    const data = await useApiFetch<Group[]>('/groups/')
     groups.value = data as any
   } catch (e: any) {
     console.error('Failed to fetch groups:', e)
@@ -105,7 +107,7 @@ const fetchGroups = async () => {
 const fetchItems = async () => {
   try {
     loading.value = true
-    let url = '/goods-receipts'
+    let url = '/goods-receipts/'
     const data = await useApiFetch<GoodsReceipt[]>(url)
     items.value = data as any
     error.value = null
@@ -216,9 +218,11 @@ const createItem = async () => {
     }
 
     loading.value = true
-    await useApiFetch('/goods-receipts/', {
+    // Clean currency values before sending
+    const cleanedForm = cleanCurrencyFields(form.value, ['amount'])
+    await useApiFetch('/goods-receipts', {
       method: 'POST',
-      body: form.value
+      body: cleanedForm
     })
     await fetchItems()
     closeModals()
@@ -234,13 +238,15 @@ const updateItem = async () => {
   if (!selectedItem.value) return
   try {
     loading.value = true
+    // Clean currency values before sending
+    const updateData = cleanCurrencyFields({
+      gr_date: form.value.gr_date,
+      amount: form.value.amount,
+      description: form.value.description
+    }, ['amount'])
     await useApiFetch(`/goods-receipts/${selectedItem.value.id}`, {
       method: 'PUT',
-      body: {
-        gr_date: form.value.gr_date,
-        amount: form.value.amount,
-        description: form.value.description
-      }
+      body: updateData
     })
     await fetchItems()
     closeModals()

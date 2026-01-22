@@ -104,7 +104,7 @@ const fetchRecentActivity = async (groupId: number | null) => {
 
   const [posData, grsData] = await Promise.all([
     useApiFetch(`/purchase-orders/?limit=5&owner_group_id=${groupId}`, { method: 'GET' }).catch(() => []),
-    useApiFetch(`/goods-receipts/?limit=5&owner_group_id=${groupId}`, { method: 'GET' }).catch(() => [])
+    useApiFetch(`/goods-receipts?limit=5&owner_group_id=${groupId}`, { method: 'GET' }).catch(() => [])
   ])
 
   const pos = posData as any[]

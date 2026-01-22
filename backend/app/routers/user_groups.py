@@ -8,13 +8,14 @@ from ..auth import get_db, get_current_user, require_role, now_utc
 router = APIRouter(prefix="/user-groups", tags=["user-groups"])
 
 @router.get("/", response_model=List[schemas.UserGroup])
+@router.get("", response_model=List[schemas.UserGroup], include_in_schema=False)
 def list_groups(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     return db.query(models.UserGroup).all()
 
-@router.post("/", response_model=schemas.UserGroup)
+@router.post("", response_model=schemas.UserGroup)
 def create_group(
     group: schemas.UserGroupCreate,
     db: Session = Depends(get_db),

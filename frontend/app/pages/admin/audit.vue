@@ -90,7 +90,7 @@ const fetchAuditLogs = async () => {
 
 const fetchUsers = async () => {
   try {
-    const res = await useApiFetch<User[]>(`/users`)
+    const res = await useApiFetch<User[]>('/users')
     users.value = res
   } catch (e: any) {
     console.error('Failed to load users:', e)

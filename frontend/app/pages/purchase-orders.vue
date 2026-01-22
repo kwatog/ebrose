@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { CURRENCIES, CURRENCY_OPTIONS, DEFAULT_CURRENCY, SPEND_CATEGORIES, SPEND_CATEGORY_OPTIONS, PO_TYPES, PO_TYPE_OPTIONS, STATUSES, STATUS_OPTIONS } from '~/composables/useConstants'
+import { cleanCurrencyFields } from '@/composables/useCurrency'
+import { CURRENCIES, CURRENCY_OPTIONS, DEFAULT_CURRENCY, SPEND_CATEGORIES, SPEND_CATEGORY_OPTIONS, PO_TYPES, PO_TYPE_OPTIONS, STATUSES, STATUS_OPTIONS } from '@/composables/useConstants'
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
@@ -360,9 +361,11 @@ const createItem = async () => {
     }
 
     loading.value = true
-    await useApiFetch('/purchase-orders/', {
+    // Clean currency values before sending
+    const cleanedForm = cleanCurrencyFields(form.value, ['total_amount'])
+    await useApiFetch('/purchase-orders', {
       method: 'POST',
-      body: form.value
+      body: cleanedForm
     })
     await fetchItems()
     closeModals()
@@ -378,21 +381,23 @@ const updateItem = async () => {
   if (!editingItem.value) return
   try {
     loading.value = true
+    // Clean currency values before sending
+    const updateData = cleanCurrencyFields({
+      ariba_pr_number: form.value.ariba_pr_number,
+      supplier: form.value.supplier,
+      po_type: form.value.po_type,
+      start_date: form.value.start_date,
+      end_date: form.value.end_date,
+      total_amount: form.value.total_amount,
+      currency: form.value.currency,
+      spend_category: form.value.spend_category,
+      planned_commit_date: form.value.planned_commit_date,
+      actual_commit_date: form.value.actual_commit_date,
+      status: form.value.status
+    }, ['total_amount'])
     await useApiFetch(`/purchase-orders/${editingItem.value.id}`, {
       method: 'PUT',
-      body: {
-        ariba_pr_number: form.value.ariba_pr_number,
-        supplier: form.value.supplier,
-        po_type: form.value.po_type,
-        start_date: form.value.start_date,
-        end_date: form.value.end_date,
-        total_amount: form.value.total_amount,
-        currency: form.value.currency,
-        spend_category: form.value.spend_category,
-        planned_commit_date: form.value.planned_commit_date,
-        actual_commit_date: form.value.actual_commit_date,
-        status: form.value.status
-      }
+      body: updateData
     })
     await fetchItems()
     closeModals()

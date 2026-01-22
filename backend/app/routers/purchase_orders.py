@@ -56,6 +56,7 @@ def get_accessible_po_ids(db: Session, user: models.User) -> List[int]:
     return list(accessible_ids)
 
 @router.get("/", response_model=List[schemas.PurchaseOrder])
+@router.get("", response_model=List[schemas.PurchaseOrder], include_in_schema=False)
 def list_purchase_orders(
     skip: int = 0,
     limit: int = 100,
@@ -98,7 +99,7 @@ def get_purchase_order(
         raise HTTPException(status_code=404, detail="PurchaseOrder not found")
     return po
 
-@router.post("/", response_model=schemas.PurchaseOrder)
+@router.post("", response_model=schemas.PurchaseOrder)
 @audit_log_change(action="CREATE", table_name="purchase_order")
 async def create_purchase_order(
     po: schemas.PurchaseOrderCreate,

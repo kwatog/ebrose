@@ -51,6 +51,7 @@ const items = ref<WBS[]>([])
 const lineItems = ref<LineItem[]>([])
 const groups = ref<Group[]>([])
 const loading = ref(true)
+const lineItemsLoading = ref(false)
 const error = ref<string | null>(null)
 
 const showCreateModal = ref(false)
@@ -79,7 +80,7 @@ const statusOptions = [
 const lineItemOptions = computed(() =>
   lineItems.value.map(li => ({
     value: li.id,
-    label: `${li.title} (${li.spend_category})`
+    label: `${li.title} (${li.spend_category}) - ID: ${li.id}`
   }))
 )
 
@@ -106,10 +107,20 @@ const fetchItems = async () => {
 
 const fetchLineItems = async () => {
   try {
-    const data = await useApiFetch('/business-case-line-items/', { method: 'GET' })
+    lineItemsLoading.value = true
+    console.log('Fetching line items...')
+    const data = await useApiFetch('/business-case-line-items/?limit=200', { method: 'GET' })
     lineItems.value = data as LineItem[]
+    console.log(`Loaded ${lineItems.value.length} line items`)
+    if (lineItems.value.length === 0) {
+      console.warn('No line items found. This may be due to access permissions.')
+      showError('No line items found. Please ensure you have access to line items through your groups.')
+    }
   } catch (e: any) {
     console.error('Failed to fetch line items:', e)
+    showError(`Failed to load line items: ${e.data?.detail || e.message}`)
+  } finally {
+    lineItemsLoading.value = false
   }
 }
 
@@ -206,7 +217,7 @@ const createItem = async () => {
     }
 
     loading.value = true
-    await useApiFetch('/wbs/', {
+    await useApiFetch('/wbs', {
       method: 'POST',
       body: form.value
     })
@@ -293,9 +304,14 @@ onMounted(async () => {
       <BaseSelect
         v-model="filterLineItem"
         :options="[{ value: null, label: 'All Line Items' }, ...lineItemOptions]"
+        :disabled="lineItemsLoading"
         label="Line Item"
         @change="fetchItems"
       />
+      <div v-if="lineItems.length === 0 && !lineItemsLoading" class="debug-info">
+        <BaseBadge variant="warning" size="sm">No line items loaded</BaseBadge>
+        <span class="debug-text">User role: {{ currentUser?.role || 'Unknown' }}</span>
+      </div>
     </div>
 
     <div v-if="loading" class="loading-state">
@@ -375,10 +391,12 @@ onMounted(async () => {
         <BaseSelect
           v-model="form.business_case_line_item_id"
           :options="[{ value: 0, label: 'Select a line item' }, ...lineItemOptions]"
+          :disabled="lineItemsLoading"
           label="Line Item"
           required
           help-text="Select the parent business case line item"
         />
+        <BaseLoadingSpinner v-if="lineItemsLoading" size="sm" label="Loading line items..." />
 
         <BaseInput
           v-model="form.wbs_code"
@@ -517,5 +535,23 @@ onMounted(async () => {
   .filters {
     flex-direction: column;
   }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.debug-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  background: var(--color-warning-bg);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+}
+
+.debug-text {
+  color: var(--color-warning);
 }
 </style>

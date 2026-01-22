@@ -5,6 +5,40 @@ from datetime import datetime
 from pydantic import field_validator
 
 
+# Utility function for parsing currency values
+def parse_decimal(v, required=False):
+    """
+    Parse a value to Decimal, handling common formatting issues:
+    - Removes commas from string input (e.g., "1,234.56" -> "1234.56")
+    - Removes whitespace
+    - Handles None, empty strings
+    - Converts floats and ints properly
+
+    Args:
+        v: Value to parse
+        required: If True, raises ValueError for None/empty values
+    """
+    if v is None or v == '':
+        if required:
+            raise ValueError('Field is required and cannot be empty')
+        return None
+
+    if isinstance(v, str):
+        # Remove commas and whitespace from string input
+        v = v.replace(',', '').strip()
+        if not v:
+            if required:
+                raise ValueError('Field cannot be empty')
+            return None
+
+    try:
+        if isinstance(v, float):
+            return Decimal(str(v)).quantize(Decimal('0.01'))
+        return Decimal(str(v)).quantize(Decimal('0.01'))
+    except (ValueError, ArithmeticError):
+        raise ValueError('Invalid value: must be a valid number')
+
+
 # --- User ---
 class UserBase(BaseModel):
     username: str
@@ -146,22 +180,7 @@ class BudgetItemBase(BaseModel):
     @field_validator('budget_amount', mode='before')
     @classmethod
     def round_budget_amount(cls, v):
-        if v is None or v == '':
-            raise ValueError('budget_amount is required and cannot be empty')
-
-        # Handle string inputs - remove commas and whitespace
-        if isinstance(v, str):
-            v = v.replace(',', '').strip()
-            if not v:
-                raise ValueError('budget_amount cannot be empty')
-
-        # Convert to Decimal with proper error handling
-        try:
-            if isinstance(v, float):
-                return Decimal(str(v)).quantize(Decimal('0.01'))
-            return Decimal(str(v)).quantize(Decimal('0.01'))
-        except (ValueError, ArithmeticError) as e:
-            raise ValueError(f'Invalid budget_amount: must be a valid number')
+        return parse_decimal(v, required=True)
 
 class BudgetItemCreate(BudgetItemBase):
     pass
@@ -176,11 +195,7 @@ class BudgetItemUpdate(BaseModel):
     @field_validator('budget_amount', mode='before')
     @classmethod
     def round_budget_amount(cls, v):
-        if v is None:
-            return v
-        if isinstance(v, float):
-            return Decimal(str(v)).quantize(Decimal('0.01'))
-        return Decimal(str(v)).quantize(Decimal('0.01'))
+        return parse_decimal(v, required=False)
 
 class BudgetItem(BudgetItemBase, AuditMixin):
     id: int
@@ -200,11 +215,7 @@ class BusinessCaseBase(BaseModel):
     @field_validator('estimated_cost', mode='before')
     @classmethod
     def round_estimated_cost(cls, v):
-        if v is None:
-            return v
-        if isinstance(v, float):
-            return Decimal(str(v)).quantize(Decimal('0.01'))
-        return Decimal(str(v)).quantize(Decimal('0.01'))
+        return parse_decimal(v, required=False)
 
 class BusinessCaseCreate(BusinessCaseBase):
     pass
@@ -221,11 +232,7 @@ class BusinessCaseUpdate(BaseModel):
     @field_validator('estimated_cost', mode='before')
     @classmethod
     def round_estimated_cost(cls, v):
-        if v is None:
-            return v
-        if isinstance(v, float):
-            return Decimal(str(v)).quantize(Decimal('0.01'))
-        return Decimal(str(v)).quantize(Decimal('0.01'))
+        return parse_decimal(v, required=False)
 
 class BusinessCase(BusinessCaseBase, AuditMixin):
     id: int
@@ -267,11 +274,7 @@ class BusinessCaseLineItemUpdate(BaseModel):
     @field_validator('requested_amount', mode='before')
     @classmethod
     def round_requested_amount(cls, v):
-        if v is None:
-            return v
-        if isinstance(v, float):
-            return Decimal(str(v)).quantize(Decimal('0.01'))
-        return Decimal(str(v)).quantize(Decimal('0.01'))
+        return parse_decimal(v, required=False)
 
 class BusinessCaseLineItem(BusinessCaseLineItemBase, AuditMixin):
     id: int
@@ -342,11 +345,7 @@ class PurchaseOrderBase(BaseModel):
     @field_validator('total_amount', mode='before')
     @classmethod
     def round_total_amount(cls, v):
-        if v is None:
-            return v
-        if isinstance(v, float):
-            return Decimal(str(v)).quantize(Decimal('0.01'))
-        return Decimal(str(v)).quantize(Decimal('0.01'))
+        return parse_decimal(v, required=False)
 
 class PurchaseOrderCreate(PurchaseOrderBase):
     pass
@@ -367,11 +366,7 @@ class PurchaseOrderUpdate(BaseModel):
     @field_validator('total_amount', mode='before')
     @classmethod
     def round_total_amount(cls, v):
-        if v is None:
-            return v
-        if isinstance(v, float):
-            return Decimal(str(v)).quantize(Decimal('0.01'))
-        return Decimal(str(v)).quantize(Decimal('0.01'))
+        return parse_decimal(v, required=False)
 
 class PurchaseOrder(PurchaseOrderBase, AuditMixin):
     id: int
@@ -390,9 +385,7 @@ class GoodsReceiptBase(BaseModel):
     @field_validator('amount', mode='before')
     @classmethod
     def round_amount(cls, v):
-        if isinstance(v, float):
-            return Decimal(str(v)).quantize(Decimal('0.01'))
-        return Decimal(str(v)).quantize(Decimal('0.01'))
+        return parse_decimal(v, required=True)
 
 class GoodsReceiptCreate(GoodsReceiptBase):
     pass
@@ -405,11 +398,7 @@ class GoodsReceiptUpdate(BaseModel):
     @field_validator('amount', mode='before')
     @classmethod
     def round_amount(cls, v):
-        if v is None:
-            return v
-        if isinstance(v, float):
-            return Decimal(str(v)).quantize(Decimal('0.01'))
-        return Decimal(str(v)).quantize(Decimal('0.01'))
+        return parse_decimal(v, required=False)
 
 class GoodsReceipt(GoodsReceiptBase, AuditMixin):
     id: int
@@ -430,11 +419,7 @@ class ResourceBase(BaseModel):
     @field_validator('cost_per_month', mode='before')
     @classmethod
     def round_cost_per_month(cls, v):
-        if v is None:
-            return v
-        if isinstance(v, float):
-            return Decimal(str(v)).quantize(Decimal('0.01'))
-        return Decimal(str(v)).quantize(Decimal('0.01'))
+        return parse_decimal(v, required=False)
 
 class ResourceCreate(ResourceBase):
     pass
@@ -451,11 +436,7 @@ class ResourceUpdate(BaseModel):
     @field_validator('cost_per_month', mode='before')
     @classmethod
     def round_cost_per_month(cls, v):
-        if v is None:
-            return v
-        if isinstance(v, float):
-            return Decimal(str(v)).quantize(Decimal('0.01'))
-        return Decimal(str(v)).quantize(Decimal('0.01'))
+        return parse_decimal(v, required=False)
 
 class Resource(ResourceBase, AuditMixin):
     id: int
@@ -474,11 +455,7 @@ class ResourcePOAllocationBase(BaseModel):
     @field_validator('expected_monthly_burn', mode='before')
     @classmethod
     def round_expected_burn(cls, v):
-        if v is None:
-            return v
-        if isinstance(v, float):
-            return Decimal(str(v)).quantize(Decimal('0.01'))
-        return Decimal(str(v)).quantize(Decimal('0.01'))
+        return parse_decimal(v, required=False)
 
 class ResourcePOAllocationCreate(ResourcePOAllocationBase):
     pass
@@ -491,11 +468,7 @@ class ResourcePOAllocationUpdate(BaseModel):
     @field_validator('expected_monthly_burn', mode='before')
     @classmethod
     def round_expected_burn(cls, v):
-        if v is None:
-            return v
-        if isinstance(v, float):
-            return Decimal(str(v)).quantize(Decimal('0.01'))
-        return Decimal(str(v)).quantize(Decimal('0.01'))
+        return parse_decimal(v, required=False)
 
 class ResourcePOAllocation(ResourcePOAllocationBase, AuditMixin):
     id: int

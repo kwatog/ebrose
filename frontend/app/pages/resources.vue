@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { cleanCurrencyFields } from '@/composables/useCurrency'
+
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
 const userInfo = useCookie('user_info')
@@ -216,9 +218,11 @@ const createItem = async () => {
     }
 
     loading.value = true
-    await useApiFetch('/resources/', {
+    // Clean currency values before sending
+    const cleanedForm = cleanCurrencyFields(form.value, ['cost_per_month'])
+    await useApiFetch('/resources', {
       method: 'POST',
-      body: form.value
+      body: cleanedForm
     })
     await fetchItems()
     closeModals()
@@ -234,17 +238,19 @@ const updateItem = async () => {
   if (!selectedItem.value) return
   try {
     loading.value = true
+    // Clean currency values before sending
+    const updateData = cleanCurrencyFields({
+      name: form.value.name,
+      vendor: form.value.vendor,
+      role: form.value.role,
+      start_date: form.value.start_date,
+      end_date: form.value.end_date,
+      cost_per_month: form.value.cost_per_month,
+      status: form.value.status
+    }, ['cost_per_month'])
     await useApiFetch(`/resources/${selectedItem.value.id}`, {
       method: 'PUT',
-      body: {
-        name: form.value.name,
-        vendor: form.value.vendor,
-        role: form.value.role,
-        start_date: form.value.start_date,
-        end_date: form.value.end_date,
-        cost_per_month: form.value.cost_per_month,
-        status: form.value.status
-      }
+      body: updateData
     })
     await fetchItems()
     closeModals()

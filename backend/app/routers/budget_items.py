@@ -10,6 +10,7 @@ router = APIRouter(prefix="/budget-items", tags=["budget-items"])
 
 
 @router.get("/", response_model=List[schemas.BudgetItem])
+@router.get("", response_model=List[schemas.BudgetItem], include_in_schema=False)
 def list_budget_items(
     skip: int = 0,
     limit: int = 100,
@@ -76,7 +77,7 @@ def get_budget_item(
     return budget_item
 
 
-@router.post("/", response_model=schemas.BudgetItem)
+@router.post("", response_model=schemas.BudgetItem)
 @audit_log_change(action="CREATE", table_name="budget_item")
 async def create_budget_item(
     budget_item: schemas.BudgetItemCreate,

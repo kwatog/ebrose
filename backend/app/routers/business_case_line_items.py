@@ -10,14 +10,13 @@ router = APIRouter(prefix="/business-case-line-items", tags=["business-case-line
 
 
 @router.get("/", response_model=List[schemas.BusinessCaseLineItem])
-def list_line_items(
+@router.get("", response_model=List[schemas.BusinessCaseLineItem], include_in_schema=False)
+def list_business_case_line_items(
     skip: int = 0,
     limit: int = 100,
     business_case_id: int = None,
-    owner_group_id: int = None,
-    spend_category: str = None,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_role("User"))
+    current_user: models.User = Depends(get_current_user)
 ):
     """List all business case line items with pagination and filtering."""
     query = db.query(models.BusinessCaseLineItem)
@@ -85,7 +84,7 @@ def get_line_item(
     return line_item
 
 
-@router.post("/", response_model=schemas.BusinessCaseLineItem)
+@router.post("", response_model=schemas.BusinessCaseLineItem)
 @audit_log_change(action="CREATE", table_name="business_case_line_item")
 async def create_line_item(
     line_item: schemas.BusinessCaseLineItemCreate,

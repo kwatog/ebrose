@@ -59,7 +59,7 @@ def can_user_access_record(db: Session, user: models.User, record_type: str, rec
     
     return False
 
-@router.get("/", response_model=List[Dict[str, Any]])
+@router.get("", response_model=List[Dict[str, Any]])
 def get_alerts(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)

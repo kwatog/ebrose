@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { CURRENCY_OPTIONS, DEFAULT_CURRENCY, LINE_ITEM_STATUS_OPTIONS, SPEND_CATEGORIES } from '~/composables/useConstants'
+import { cleanCurrencyFields } from '@/composables/useCurrency'
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY, LINE_ITEM_STATUS_OPTIONS, SPEND_CATEGORIES } from '@/composables/useConstants'
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
@@ -130,7 +131,7 @@ const fetchBudgetItems = async () => {
 
 const fetchGroups = async () => {
   try {
-    const res = await useApiFetch<UserGroup[]>('/user-groups/')
+    const res = await useApiFetch<UserGroup[]>('/user-groups')
     groups.value = res as any
     if (groups.value.length > 0 && form.value.owner_group_id === 0) {
       form.value.owner_group_id = groups.value[0].id
@@ -211,9 +212,11 @@ const closeModals = () => {
 const createItem = async () => {
   try {
     loading.value = true
-    await useApiFetch('/business-case-line-items/', {
+    // Clean currency values before sending
+    const cleanedForm = cleanCurrencyFields(form.value, ['requested_amount'])
+    await useApiFetch('/business-case-line-items', {
       method: 'POST',
-      body: form.value
+      body: cleanedForm
     })
     await fetchItems()
     closeModals()
@@ -229,17 +232,19 @@ const updateItem = async () => {
   if (!selectedItem.value) return
   try {
     loading.value = true
+    // Clean currency values before sending
+    const updateData = cleanCurrencyFields({
+      title: form.value.title,
+      description: form.value.description,
+      spend_category: form.value.spend_category,
+      requested_amount: form.value.requested_amount,
+      currency: form.value.currency,
+      planned_commit_date: form.value.planned_commit_date,
+      status: form.value.status
+    }, ['requested_amount'])
     await useApiFetch(`/business-case-line-items/${selectedItem.value.id}`, {
       method: 'PUT',
-      body: {
-        title: form.value.title,
-        description: form.value.description,
-        spend_category: form.value.spend_category,
-        requested_amount: form.value.requested_amount,
-        currency: form.value.currency,
-        planned_commit_date: form.value.planned_commit_date,
-        status: form.value.status
-      }
+      body: updateData
     })
     await fetchItems()
     closeModals()
