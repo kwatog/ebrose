@@ -8,11 +8,11 @@ from ..auth import get_db, get_current_user, check_record_access, audit_log_chan
 router = APIRouter(prefix="/business-cases", tags=["business-cases"])
 
 @router.get("/", response_model=List[schemas.BusinessCase])
+@router.get("", response_model=List[schemas.BusinessCase], include_in_schema=False)
 def list_business_cases(
     skip: int = 0,
     limit: int = 100,
     status: str = None,
-    requestor: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):

@@ -56,6 +56,7 @@ def get_accessible_po_ids(db: Session, user: models.User) -> List[int]:
     return list(accessible_ids)
 
 @router.get("/", response_model=List[schemas.PurchaseOrder])
+@router.get("", response_model=List[schemas.PurchaseOrder], include_in_schema=False)
 def list_purchase_orders(
     skip: int = 0,
     limit: int = 100,

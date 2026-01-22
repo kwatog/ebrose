@@ -49,12 +49,12 @@ def get_accessible_allocation_ids(db: Session, user: models.User) -> List[int]:
     return list(accessible_ids)
 
 @router.get("/", response_model=List[schemas.ResourcePOAllocation])
+@router.get("", response_model=List[schemas.ResourcePOAllocation], include_in_schema=False)
 def list_allocations(
     skip: int = 0,
     limit: int = 100,
-    resource_id: Optional[int] = None,
-    po_id: Optional[int] = None,
-    owner_group_id: Optional[int] = None,
+    resource_id: int = None,
+    po_id: int = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):

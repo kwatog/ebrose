@@ -10,6 +10,7 @@ router = APIRouter(prefix="/budget-items", tags=["budget-items"])
 
 
 @router.get("/", response_model=List[schemas.BudgetItem])
+@router.get("", response_model=List[schemas.BudgetItem], include_in_schema=False)
 def list_budget_items(
     skip: int = 0,
     limit: int = 100,
