@@ -108,7 +108,8 @@ def get_asset(
         raise HTTPException(status_code=404, detail="Asset not found")
     return asset
 
-@router.post("", response_model=schemas.Asset)
+@router.post("/", response_model=schemas.Asset)
+@router.post("", response_model=schemas.Asset, include_in_schema=False)
 @audit_log_change(action="CREATE", table_name="asset")
 async def create_asset(
     asset: schemas.AssetCreate,

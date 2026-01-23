@@ -77,7 +77,8 @@ def get_budget_item(
     return budget_item
 
 
-@router.post("", response_model=schemas.BudgetItem)
+@router.post("/", response_model=schemas.BudgetItem)
+@router.post("", response_model=schemas.BudgetItem, include_in_schema=False)
 @audit_log_change(action="CREATE", table_name="budget_item")
 async def create_budget_item(
     budget_item: schemas.BudgetItemCreate,

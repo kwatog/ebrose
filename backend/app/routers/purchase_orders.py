@@ -99,7 +99,8 @@ def get_purchase_order(
         raise HTTPException(status_code=404, detail="PurchaseOrder not found")
     return po
 
-@router.post("", response_model=schemas.PurchaseOrder)
+@router.post("/", response_model=schemas.PurchaseOrder)
+@router.post("", response_model=schemas.PurchaseOrder, include_in_schema=False)
 @audit_log_change(action="CREATE", table_name="purchase_order")
 async def create_purchase_order(
     po: schemas.PurchaseOrderCreate,

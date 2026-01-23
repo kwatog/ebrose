@@ -86,7 +86,8 @@ def get_line_item(
     return line_item
 
 
-@router.post("", response_model=schemas.BusinessCaseLineItem)
+@router.post("/", response_model=schemas.BusinessCaseLineItem)
+@router.post("", response_model=schemas.BusinessCaseLineItem, include_in_schema=False)
 @audit_log_change(action="CREATE", table_name="business_case_line_item")
 async def create_line_item(
     line_item: schemas.BusinessCaseLineItemCreate,
