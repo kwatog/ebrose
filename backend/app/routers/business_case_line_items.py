@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from .. import models, schemas
 from ..database import SessionLocal, get_db
@@ -14,7 +14,9 @@ router = APIRouter(prefix="/business-case-line-items", tags=["business-case-line
 def list_business_case_line_items(
     skip: int = 0,
     limit: int = 100,
-    business_case_id: int = None,
+    business_case_id: Optional[int] = None,
+    owner_group_id: Optional[int] = None,
+    spend_category: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
