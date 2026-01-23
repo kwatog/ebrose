@@ -27,7 +27,6 @@ def list_business_cases(
         query = query.filter(models.BusinessCase.status == status)
     if requestor:
         query = query.filter(models.BusinessCase.requestor.ilike(f"%{requestor}%"))
-        query = query.filter(models.BusinessCase.requestor.ilike(f"%{requestor}%"))
 
     # Order by created_at descending
     query = query.order_by(models.BusinessCase.created_at.desc())

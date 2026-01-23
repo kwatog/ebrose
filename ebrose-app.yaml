@@ -12,9 +12,9 @@ spec:
     helm:
       parameters:
         - name: backend.image.tag
-          value: v0.7.7
+          value: v0.7.8
         - name: frontend.image.tag
-          value: v0.7.7
+          value: v0.7.8
         - name: backend.env.ENVIRONMENT
           value: production
         - name: backend.env.COOKIE_DOMAIN
