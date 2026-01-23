@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from ..database import SessionLocal
 from .. import models, schemas
 from ..auth import get_db, get_current_user, check_record_access, audit_log_change, require_role, now_utc
@@ -13,6 +13,7 @@ def list_business_cases(
     skip: int = 0,
     limit: int = 100,
     status: str = None,
+    requestor: Optional[str] = None, # Added this line
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
@@ -25,6 +26,7 @@ def list_business_cases(
     if status:
         query = query.filter(models.BusinessCase.status == status)
     if requestor:
+        query = query.filter(models.BusinessCase.requestor.ilike(f"%{requestor}%"))
         query = query.filter(models.BusinessCase.requestor.ilike(f"%{requestor}%"))
 
     # Order by created_at descending
