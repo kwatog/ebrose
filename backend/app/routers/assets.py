@@ -67,6 +67,9 @@ def get_accessible_asset_ids(db: Session, user: models.User) -> List[int]:
 def list_assets(
     skip: int = 0,
     limit: int = 100,
+    wbs_id: Optional[int] = None,
+    owner_group_id: Optional[int] = None,
+    status: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):

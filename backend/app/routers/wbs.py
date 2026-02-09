@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from ..database import SessionLocal
 from .. import models, schemas
 from ..auth import get_db, get_current_user, check_record_access, audit_log_change, now_utc
@@ -12,6 +12,9 @@ router = APIRouter(prefix="/wbs", tags=["wbs"])
 def list_wbs(
     skip: int = 0,
     limit: int = 100,
+    business_case_line_item_id: Optional[int] = None,
+    owner_group_id: Optional[int] = None,
+    status: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
