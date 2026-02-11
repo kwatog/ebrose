@@ -21,6 +21,8 @@ spec:
         spec:
           restartPolicy: OnFailure
           serviceAccountName: {{ include "ebrose.fullname" . }}-backend
+          securityContext:
+            fsGroup: 1000
           nodeSelector:
             kubernetes.io/hostname: k8s-worker-04
           containers:
