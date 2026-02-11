@@ -74,7 +74,11 @@ def list_purchase_orders(
     - Records they created
     """
     accessible_ids = get_accessible_po_ids(db, current_user)
-    
+
+    # If no accessible purchase orders, return empty list
+    if not accessible_ids:
+        return []
+
     query = db.query(models.PurchaseOrder).filter(models.PurchaseOrder.id.in_(accessible_ids))
 
     if status is not None:

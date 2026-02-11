@@ -65,7 +65,11 @@ def list_resources(
     - Records they created
     """
     accessible_ids = get_accessible_resource_ids(db, current_user)
-    
+
+    # If no accessible resources, return empty list
+    if not accessible_ids:
+        return []
+
     query = db.query(models.Resource).filter(models.Resource.id.in_(accessible_ids))
 
     if owner_group_id is not None:

@@ -66,7 +66,11 @@ def list_allocations(
     - Records they created
     """
     accessible_ids = get_accessible_allocation_ids(db, current_user)
-    
+
+    # If no accessible allocations, return empty list
+    if not accessible_ids:
+        return []
+
     query = db.query(models.ResourcePOAllocation).filter(
         models.ResourcePOAllocation.id.in_(accessible_ids)
     )

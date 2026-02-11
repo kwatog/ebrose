@@ -55,6 +55,10 @@ def list_business_case_line_items(
         accessible_ids += [access.record_id for access in explicit_user_access.all()]
         accessible_ids += [access.record_id for access in explicit_group_access.all()]
 
+        # If no accessible business case line items, return empty list
+        if not accessible_ids:
+            return []
+
         query = query.filter(models.BusinessCaseLineItem.id.in_(accessible_ids))
 
     # Apply filters

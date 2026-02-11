@@ -53,6 +53,10 @@ def list_wbs(
         accessible_ids += [access.record_id for access in explicit_user_access.all()]
         accessible_ids += [access.record_id for access in explicit_group_access.all()]
 
+        # If no accessible WBS items, return empty list
+        if not accessible_ids:
+            return []
+
         query = query.filter(models.WBS.id.in_(accessible_ids))
 
     # Apply filters

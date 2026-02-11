@@ -82,7 +82,11 @@ def list_assets(
     """
     # Get accessible asset IDs
     accessible_ids = get_accessible_asset_ids(db, current_user)
-    
+
+    # If no accessible assets, return empty list
+    if not accessible_ids:
+        return []
+
     # Start query with access filter
     query = db.query(models.Asset).filter(models.Asset.id.in_(accessible_ids))
     

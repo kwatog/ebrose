@@ -66,7 +66,11 @@ def list_goods_receipts(
     - Records they created
     """
     accessible_ids = get_accessible_gr_ids(db, current_user)
-    
+
+    # If no accessible goods receipts, return empty list
+    if not accessible_ids:
+        return []
+
     query = db.query(models.GoodsReceipt).filter(models.GoodsReceipt.id.in_(accessible_ids))
 
     if po_id is not None:
