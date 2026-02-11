@@ -216,6 +216,7 @@ def debug_routes():
 app.include_router(auth_router.router)
 app.include_router(users.router)
 app.include_router(user_groups.router)
+app.include_router(user_groups.groups_alias)  # Alias for /groups
 app.include_router(record_access.router)
 app.include_router(audit_logs.router)
 app.include_router(dashboard.router)

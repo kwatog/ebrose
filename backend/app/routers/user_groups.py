@@ -6,9 +6,12 @@ from .. import models, schemas
 from ..auth import get_db, get_current_user, require_role, now_utc
 
 router = APIRouter(prefix="/user-groups", tags=["user-groups"])
+groups_alias = APIRouter(prefix="/groups", tags=["groups"], include_in_schema=False)
 
 @router.get("/", response_model=List[schemas.UserGroup])
 @router.get("", response_model=List[schemas.UserGroup], include_in_schema=False)
+@groups_alias.get("/", response_model=List[schemas.UserGroup])
+@groups_alias.get("", response_model=List[schemas.UserGroup])
 def list_groups(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
@@ -16,6 +19,7 @@ def list_groups(
     return db.query(models.UserGroup).all()
 
 @router.post("", response_model=schemas.UserGroup)
+@groups_alias.post("", response_model=schemas.UserGroup)
 def create_group(
     group: schemas.UserGroupCreate,
     db: Session = Depends(get_db),
@@ -32,6 +36,7 @@ def create_group(
     return db_group
 
 @router.get("/{group_id}", response_model=schemas.UserGroup)
+@groups_alias.get("/{group_id}", response_model=schemas.UserGroup)
 def get_group(
     group_id: int,
     db: Session = Depends(get_db),
@@ -43,6 +48,7 @@ def get_group(
     return group
 
 @router.put("/{group_id}", response_model=schemas.UserGroup)
+@groups_alias.put("/{group_id}", response_model=schemas.UserGroup)
 def update_group(
     group_id: int,
     group_update: schemas.UserGroupUpdate,
@@ -62,6 +68,7 @@ def update_group(
     return group
 
 @router.delete("/{group_id}")
+@groups_alias.delete("/{group_id}")
 def delete_group(
     group_id: int,
     db: Session = Depends(get_db),
@@ -76,6 +83,7 @@ def delete_group(
     return {"status": "deleted", "id": group_id}
 
 @router.get("/{group_id}/members", response_model=List[schemas.UserGroupMembership])
+@groups_alias.get("/{group_id}/members", response_model=List[schemas.UserGroupMembership])
 def list_group_members(
     group_id: int,
     db: Session = Depends(get_db),
@@ -84,6 +92,7 @@ def list_group_members(
     return db.query(models.UserGroupMembership).filter(models.UserGroupMembership.group_id == group_id).all()
 
 @router.post("/{group_id}/members", response_model=schemas.UserGroupMembership)
+@groups_alias.post("/{group_id}/members", response_model=schemas.UserGroupMembership)
 def add_group_member(
     group_id: int,
     membership: schemas.UserGroupMembershipCreate,
@@ -108,6 +117,7 @@ def add_group_member(
     return db_member
 
 @router.delete("/{group_id}/members/{user_id}")
+@groups_alias.delete("/{group_id}/members/{user_id}")
 def remove_group_member(
     group_id: int,
     user_id: int,
